@@ -44,6 +44,18 @@ export default {
 					DEFAULT: 'hsl(var(--accent))',
 					foreground: 'hsl(var(--accent-foreground))'
 				},
+				spiritual: {
+					DEFAULT: 'hsl(var(--spiritual))',
+					foreground: 'hsl(var(--spiritual-foreground))'
+				},
+				sacred: {
+					DEFAULT: 'hsl(var(--sacred))',
+					foreground: 'hsl(var(--sacred-foreground))'
+				},
+				divine: {
+					DEFAULT: 'hsl(var(--divine))',
+					foreground: 'hsl(var(--divine-foreground))'
+				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
 					foreground: 'hsl(var(--popover-foreground))'
@@ -84,11 +96,51 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(20px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'float': {
+					'0%, 100%': {
+						transform: 'translateY(0px)'
+					},
+					'50%': {
+						transform: 'translateY(-10px)'
+					}
+				},
+				'glow': {
+					'0%, 100%': {
+						boxShadow: '0 0 20px hsl(var(--spiritual) / 0.5)'
+					},
+					'50%': {
+						boxShadow: '0 0 40px hsl(var(--spiritual) / 0.8)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.6s ease-out',
+				'float': 'float 3s ease-in-out infinite',
+				'glow': 'glow 2s ease-in-out infinite alternate'
+			},
+			backgroundImage: {
+				'gradient-spiritual': 'var(--gradient-spiritual)',
+				'gradient-sacred': 'var(--gradient-sacred)',
+				'gradient-divine': 'var(--gradient-divine)',
+				'gradient-hero': 'var(--gradient-hero)'
+			},
+			boxShadow: {
+				'spiritual': 'var(--shadow-spiritual)',
+				'sacred': 'var(--shadow-sacred)',
+				'divine': 'var(--shadow-divine)'
 			}
 		}
 	},
