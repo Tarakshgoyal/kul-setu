@@ -34,7 +34,7 @@ const Search = () => {
   const handleInputChange = (field: keyof FamilyMember, value: string) => {
     setSearchQuery(prev => ({
       ...prev,
-      [field]: value || undefined
+      [field]: value === 'all' ? undefined : value || undefined
     }));
   };
 
@@ -126,7 +126,7 @@ const Search = () => {
                     <SelectValue placeholder="Any blood group" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any blood group</SelectItem>
+                    <SelectItem value="all">Any blood group</SelectItem>
                     {bloodGroups.map(group => (
                       <SelectItem key={group} value={group}>{group}</SelectItem>
                     ))}
@@ -141,7 +141,7 @@ const Search = () => {
                     <SelectValue placeholder="Any eye color" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any eye color</SelectItem>
+                    <SelectItem value="all">Any eye color</SelectItem>
                     {eyeColors.map(color => (
                       <SelectItem key={color} value={color}>{color}</SelectItem>
                     ))}
