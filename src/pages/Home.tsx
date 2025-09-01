@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { UserPlus, Search, Users, Heart, Star, TreePine } from 'lucide-react';
-import heroImage from '@/assets/hero-spiritual.jpg';
+// import heroImage from '@/assets/hero-spiritual.jpg';
+import heroimage from '@/assets/tree.jpg'
 
 const Home = () => {
   const features = [
@@ -60,9 +61,9 @@ const Home = () => {
             </div>
             <div className="relative animate-float">
               <img 
-                src={heroImage} 
+                src={heroimage} 
                 alt="Spiritual Family Tree"
-                className="w-full h-auto rounded-2xl shadow-divine"
+                className="w-[450px] h-auto ml-20 rounded-2xl shadow-divine"
               />
               <div className="absolute -top-4 -right-4 bg-spiritual/20 rounded-full p-4 animate-glow">
                 <Heart className="w-8 h-8 text-white" />
