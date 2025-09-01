@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Search as SearchIcon, Users, Heart, Eye, Droplets } from 'lucide-react';
-import { searchFamilyMembers, getFamilyMembers, bloodGroups, eyeColors, type FamilyMember } from '@/lib/familyData';
+import { searchFamilyMembers, getFamilyMembers, bloodGroups, eyeColors } from '@/lib/familyData';
+import type { FamilyMember } from '@/lib/familyData';
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState<Partial<FamilyMember>>({});
