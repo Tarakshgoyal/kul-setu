@@ -6,41 +6,99 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search as SearchIcon, Users, Heart, Eye, Droplets } from 'lucide-react';
-import { searchFamilyMembers, getFamilyMembers, bloodGroups, eyeColors } from '@/lib/familyData';
-import type { FamilyMember } from '@/lib/familyData';
+import { Search as SearchIcon, Users, Heart, Eye, Droplets, User, Calendar, MapPin } from 'lucide-react';
+import { 
+  bloodGroups, 
+  eyeColors, 
+  hairColors, 
+  skinTones, 
+  genders, 
+  ethnicities, 
+  yesNoOptions, 
+  educationLevels, 
+  socioeconomicStatuses, 
+  natureOptions, 
+  beardStyles, 
+  recipeCuisines, 
+  familyTraditions,
+  type FamilyMember 
+} from '@/lib/familyData';
+
+const API_URL = "http://127.0.0.1:5000";
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState<Partial<FamilyMember>>({});
   const [results, setResults] = useState<FamilyMember[]>([]);
-  const [allMembers, setAllMembers] = useState<FamilyMember[]>([]);
+  const [loading, setLoading] = useState(false);
 
+  // Load all members initially
   useEffect(() => {
-    const members = getFamilyMembers();
-    setAllMembers(members);
-    setResults(members);
+    console.log("Loading initial data from:", `${API_URL}/search`);
+    fetch(`${API_URL}/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}) // empty search = return all
+    })
+      .then(res => {
+        console.log("Response status:", res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log("Received data:", data?.length, "members");
+        setResults(data);
+      })
+      .catch(err => console.error("Error fetching members:", err));
   }, []);
 
-  const handleSearch = () => {
-    const filtered = searchFamilyMembers(searchQuery);
-    setResults(filtered);
+  // Search button handler → call backend
+  const handleSearch = async () => {
+    setLoading(true);
+    console.log("Searching with query:", searchQuery);
+    try {
+      const res = await fetch(`${API_URL}/search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(searchQuery),
+      });
+      console.log("Search response status:", res.status);
+      const data = await res.json();
+      console.log("Search results:", data?.length, "members");
+      setResults(data);
+    } catch (err) {
+      console.error("Search failed:", err);
+    }
+    setLoading(false);
   };
 
-  const handleReset = () => {
+  // Reset filters → clear state & fetch all members
+  const handleReset = async () => {
     setSearchQuery({});
-    setResults(allMembers);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      setResults(data);
+    } catch (err) {
+      console.error("Reset failed:", err);
+    }
+    setLoading(false);
   };
 
+  // Input handler
   const handleInputChange = (field: keyof FamilyMember, value: string) => {
     setSearchQuery(prev => ({
       ...prev,
-      [field]: value === 'all' ? undefined : value || undefined
+      [field]: value === "all" || value === "" ? undefined : value || undefined,
     }));
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-divine/10 py-8">
-      <div className="container mx-auto px-4 max-w-6xl">
+      <div className="container mx-auto px-4 max-w-7xl">
         <div className="text-center mb-8 animate-fade-in">
           <h1 className="text-4xl font-bold text-foreground mb-4">
             Search <span className="bg-gradient-spiritual bg-clip-text text-transparent">Family Tree</span>
@@ -60,223 +118,375 @@ const Search = () => {
           </CardHeader>
           
           <CardContent className="p-6">
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <div className="space-y-2">
-                <Label htmlFor="searchFirstName">First Name</Label>
-                <Input
-                  id="searchFirstName"
-                  value={searchQuery.firstName || ''}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  placeholder="Search by first name"
-                  className="border-border/50 focus:border-spiritual"
-                />
-              </div>
+            <div className="space-y-6">
               
-              <div className="space-y-2">
-                <Label htmlFor="searchLastName">Last Name</Label>
-                <Input
-                  id="searchLastName"
-                  value={searchQuery.lastName || ''}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  placeholder="Search by last name"
-                  className="border-border/50 focus:border-spiritual"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="searchPersonId">Person ID</Label>
-                <Input
-                  id="searchPersonId"
-                  value={searchQuery.personId || ''}
-                  onChange={(e) => handleInputChange('personId', e.target.value)}
-                  placeholder="Search by Person ID"
-                  className="border-border/50 focus:border-spiritual"
-                />
-              </div>
-            </div>
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Basic Information</h3>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={searchQuery.firstName || ''}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      placeholder="Search by first name"
+                    />
+                  </div>
 
-            <div className="grid md:grid-cols-4 gap-4 mb-6">
-              <div className="space-y-2">
-                <Label htmlFor="searchFamilyId">Family ID</Label>
-                <Input
-                  id="searchFamilyId"
-                  value={searchQuery.familyId || ''}
-                  onChange={(e) => handleInputChange('familyId', e.target.value)}
-                  placeholder="Family ID"
-                  className="border-border/50 focus:border-spiritual"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="searchGeneration">Generation</Label>
-                <Input
-                  id="searchGeneration"
-                  type="number"
-                  value={searchQuery.generation || ''}
-                  onChange={(e) => handleInputChange('generation', e.target.value)}
-                  placeholder="Generation"
-                  className="border-border/50 focus:border-spiritual"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="searchBloodGroup">Blood Group</Label>
-                <Select value={searchQuery.bloodGroup || ''} onValueChange={(value) => handleInputChange('bloodGroup', value)}>
-                  <SelectTrigger className="border-border/50 focus:border-spiritual">
-                    <SelectValue placeholder="Any blood group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Any blood group</SelectItem>
-                    {bloodGroups.map(group => (
-                      <SelectItem key={group} value={group}>{group}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="space-y-2">
+                    <Label htmlFor="personId">Person ID</Label>
+                    <Input
+                      id="personId"
+                      value={searchQuery.personId || ''}
+                      onChange={(e) => handleInputChange('personId', e.target.value)}
+                      placeholder="Search by person ID"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="familyLineId">Family Line ID</Label>
+                    <Input
+                      id="familyLineId"
+                      value={searchQuery.familyLineId || ''}
+                      onChange={(e) => handleInputChange('familyLineId', e.target.value)}
+                      placeholder="Search by family line"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="generation">Generation</Label>
+                    <Input
+                      id="generation"
+                      type="number"
+                      value={searchQuery.generation || ''}
+                      onChange={(e) => handleInputChange('generation', e.target.value)}
+                      placeholder="Search by generation"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="searchEyeColor">Eye Color</Label>
-                <Select value={searchQuery.eyeColor || ''} onValueChange={(value) => handleInputChange('eyeColor', value)}>
-                  <SelectTrigger className="border-border/50 focus:border-spiritual">
-                    <SelectValue placeholder="Any eye color" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Any eye color</SelectItem>
-                    {eyeColors.map(color => (
-                      <SelectItem key={color} value={color}>{color}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              {/* Demographics */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Demographics</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select value={searchQuery.gender || 'all'} onValueChange={(value) => handleInputChange('gender', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {genders.map(gender => (
+                          <SelectItem key={gender} value={gender}>{gender === 'M' ? 'Male' : 'Female'}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <div className="space-y-2">
-                <Label htmlFor="searchPassion">Passion</Label>
-                <Input
-                  id="searchPassion"
-                  value={searchQuery.passion || ''}
-                  onChange={(e) => handleInputChange('passion', e.target.value)}
-                  placeholder="Search by passion"
-                  className="border-border/50 focus:border-spiritual"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="searchTrait">Trait</Label>
-                <Input
-                  id="searchTrait"
-                  value={searchQuery.trait || ''}
-                  onChange={(e) => handleInputChange('trait', e.target.value)}
-                  placeholder="Search by trait"
-                  className="border-border/50 focus:border-spiritual"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="searchNature">Nature</Label>
-                <Input
-                  id="searchNature"
-                  value={searchQuery.nature || ''}
-                  onChange={(e) => handleInputChange('nature', e.target.value)}
-                  placeholder="Search by nature"
-                  className="border-border/50 focus:border-spiritual"
-                />
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ethnicity">Ethnicity</Label>
+                    <Select value={searchQuery.ethnicity || 'all'} onValueChange={(value) => handleInputChange('ethnicity', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select ethnicity" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {ethnicities.map(ethnicity => (
+                          <SelectItem key={ethnicity} value={ethnicity}>{ethnicity}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                onClick={handleSearch}
-                className="bg-gradient-spiritual text-white hover:opacity-90 shadow-spiritual"
-              >
-                <SearchIcon className="w-4 h-4 mr-2" />
-                Search Family
-              </Button>
-              <Button 
-                onClick={handleReset}
-                variant="outline"
-                className="border-spiritual text-spiritual hover:bg-spiritual/10"
-              >
-                Reset Filters
-              </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="bloodGroup">Blood Group</Label>
+                    <Select value={searchQuery.bloodGroup || 'all'} onValueChange={(value) => handleInputChange('bloodGroup', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select blood group" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {bloodGroups.map(group => (
+                          <SelectItem key={group} value={group}>{group}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Physical Characteristics */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Physical Characteristics</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="eyeColor">Eye Color</Label>
+                    <Select value={searchQuery.eyeColor || 'all'} onValueChange={(value) => handleInputChange('eyeColor', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select eye color" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {eyeColors.map(color => (
+                          <SelectItem key={color} value={color}>{color}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="hairColor">Hair Color</Label>
+                    <Select value={searchQuery.hairColor || 'all'} onValueChange={(value) => handleInputChange('hairColor', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select hair color" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {hairColors.map(color => (
+                          <SelectItem key={color} value={color}>{color}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="skinTone">Skin Tone</Label>
+                    <Select value={searchQuery.skinTone || 'all'} onValueChange={(value) => handleInputChange('skinTone', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select skin tone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {skinTones.map(tone => (
+                          <SelectItem key={tone} value={tone}>{tone}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Socioeconomic & Personal */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Socioeconomic & Personal</h3>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="educationLevel">Education Level</Label>
+                    <Select value={searchQuery.educationLevel || 'all'} onValueChange={(value) => handleInputChange('educationLevel', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select education" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {educationLevels.map(level => (
+                          <SelectItem key={level} value={level}>{level}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="socioeconomicStatus">Socioeconomic Status</Label>
+                    <Select value={searchQuery.socioeconomicStatus || 'all'} onValueChange={(value) => handleInputChange('socioeconomicStatus', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {socioeconomicStatuses.map(status => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="natureOfPerson">Nature</Label>
+                    <Select value={searchQuery.natureOfPerson || 'all'} onValueChange={(value) => handleInputChange('natureOfPerson', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select nature" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {natureOptions.map(nature => (
+                          <SelectItem key={nature} value={nature}>{nature}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nativeLocation">Native Location</Label>
+                    <Input
+                      id="nativeLocation"
+                      value={searchQuery.nativeLocation || ''}
+                      onChange={(e) => handleInputChange('nativeLocation', e.target.value)}
+                      placeholder="Search by location"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-center space-x-4 pt-4">
+                <Button 
+                  onClick={handleSearch} 
+                  disabled={loading}
+                  className="bg-gradient-spiritual hover:bg-gradient-spiritual/90 text-white px-6 py-2"
+                >
+                  <SearchIcon className="w-4 h-4 mr-2" />
+                  {loading ? 'Searching...' : 'Search'}
+                </Button>
+                <Button 
+                  onClick={handleReset} 
+                  variant="outline"
+                  disabled={loading}
+                  className="px-6 py-2"
+                >
+                  Reset Filters
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Results */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-semibold text-foreground flex items-center space-x-2">
-              <Users className="w-6 h-6 text-spiritual" />
-              <span>Search Results</span>
+        {/* Results Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-foreground flex items-center">
+              <Users className="w-6 h-6 mr-2 text-spiritual" />
+              Search Results ({results.length})
             </h2>
-            <Badge variant="outline" className="text-lg px-3 py-1">
-              {results.length} member{results.length !== 1 ? 's' : ''} found
-            </Badge>
           </div>
 
           {results.length === 0 ? (
-            <Card className="bg-card/80 backdrop-blur-sm border-0">
-              <CardContent className="text-center py-12">
-                <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <h3 className="text-xl font-medium text-muted-foreground mb-2">No family members found</h3>
-                <p className="text-muted-foreground">Try adjusting your search criteria or register new family members</p>
-                <Button asChild className="mt-4 bg-spiritual text-spiritual-foreground hover:bg-spiritual/90">
-                  <Link to="/register">Register New Member</Link>
-                </Button>
-              </CardContent>
+            <Card className="p-8 text-center bg-card/80 backdrop-blur-sm border-0 shadow-spiritual">
+              <Heart className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">No family members found</h3>
+              <p className="text-muted-foreground">Try adjusting your search criteria to find more members.</p>
             </Card>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {results.map((member) => (
-                <Link key={member.personId} to={`/profile/${member.personId}`}>
-                  <Card className="group hover:shadow-spiritual transition-all duration-300 cursor-pointer bg-card/80 backdrop-blur-sm border-0 hover:-translate-y-1">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-lg font-semibold text-foreground group-hover:text-spiritual transition-colors">
-                            {member.firstName} {member.lastName}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">ID: {member.personId}</p>
-                        </div>
-                        <Heart className="w-5 h-5 text-spiritual group-hover:animate-pulse" />
+                <Card key={member.personId} className="bg-card/80 backdrop-blur-sm border-0 shadow-spiritual hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg text-foreground">
+                        {member.firstName}
+                      </CardTitle>
+                      <Badge variant="secondary" className="text-xs">
+                        Gen {member.generation}
+                      </Badge>
+                    </div>
+                    {member.similarity_score && (
+                      <Badge variant="outline" className="text-xs w-fit">
+                        {Math.round(member.similarity_score * 100)}% match
+                      </Badge>
+                    )}
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">ID:</span>
+                        <span className="font-medium">{member.personId}</span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Heart className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Family:</span>
+                        <span className="font-medium">{member.familyLineId}</span>
                       </div>
 
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Users className="w-4 h-4 text-divine" />
-                          <span>Generation {member.generation}</span>
+                      {member.gender && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-muted-foreground">Gender:</span>
+                          <span className="font-medium">{member.gender === 'M' ? 'Male' : 'Female'}</span>
                         </div>
-                        
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Droplets className="w-4 h-4 text-red-500" />
-                          <span>{member.bloodGroup}</span>
-                          <Eye className="w-4 h-4 text-blue-500 ml-4" />
-                          <span>{member.eyeColor}</span>
-                        </div>
-                      </div>
+                      )}
 
-                      <div className="flex flex-wrap gap-2">
-                        {member.passion && (
-                          <Badge variant="outline" className="text-xs bg-sacred/20 text-sacred-foreground border-sacred/30">
-                            {member.passion}
+                      {member.ethnicity && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-muted-foreground">Ethnicity:</span>
+                          <span className="font-medium">{member.ethnicity}</span>
+                        </div>
+                      )}
+
+                      {member.eyeColor && (
+                        <div className="flex items-center space-x-2">
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Eyes:</span>
+                          <span className="font-medium">{member.eyeColor}</span>
+                        </div>
+                      )}
+
+                      {member.bloodGroup && (
+                        <div className="flex items-center space-x-2">
+                          <Droplets className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Blood:</span>
+                          <span className="font-medium">{member.bloodGroup}</span>
+                        </div>
+                      )}
+
+                      {member.nativeLocation && (
+                        <div className="flex items-center space-x-2 col-span-2">
+                          <MapPin className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Location:</span>
+                          <span className="font-medium">{member.nativeLocation}</span>
+                        </div>
+                      )}
+
+                      {member.natureOfPerson && (
+                        <div className="flex items-center space-x-2 col-span-2">
+                          <span className="text-muted-foreground">Nature:</span>
+                          <Badge variant="outline" className="text-xs">
+                            {member.natureOfPerson}
                           </Badge>
+                        </div>
+                      )}
+
+                      {member.educationLevel && (
+                        <div className="flex items-center space-x-2 col-span-2">
+                          <span className="text-muted-foreground">Education:</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {member.educationLevel}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    {(member.fatherId || member.motherId || member.spouseId) && (
+                      <div className="border-t pt-3 space-y-1">
+                        <h4 className="font-medium text-sm text-muted-foreground">Relationships</h4>
+                        {member.fatherId && (
+                          <p className="text-xs">Father: {member.fatherId}</p>
                         )}
-                        {member.trait && (
-                          <Badge variant="outline" className="text-xs bg-spiritual/20 text-spiritual-foreground border-spiritual/30">
-                            {member.trait}
-                          </Badge>
+                        {member.motherId && (
+                          <p className="text-xs">Mother: {member.motherId}</p>
                         )}
-                        {member.nature && (
-                          <Badge variant="outline" className="text-xs bg-divine/20 text-divine-foreground border-divine/30">
-                            {member.nature}
-                          </Badge>
+                        {member.spouseId && (
+                          <p className="text-xs">Spouse: {member.spouseId}</p>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                    )}
+
+                    <div className="pt-3">
+                      <Link to={`/profile/${member.personId}`}>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full hover:bg-spiritual/10 hover:border-spiritual"
+                        >
+                          View Profile
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}

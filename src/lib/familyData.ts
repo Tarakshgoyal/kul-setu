@@ -1,23 +1,93 @@
 export interface FamilyMember {
   personId: string;
-  firstName: string;
-  lastName: string;
-  familyId: string;
-  fatherId?: string;
-  motherId?: string;
+  familyLineId: string;
   generation: number;
-  birthYear: number;
-  bloodGroup: string;
+  firstName: string;
+  gender: string;
+  ethnicity?: string;
+  motherId?: string;
+  fatherId?: string;
+  spouseId?: string;
+  sharedAncestryKey?: string;
+  dob?: string;
+  dod?: string;
+  longevityAvgLifespan?: number;
+  generationAvgLifespan?: number;
+  causeOfDeath?: string;
   eyeColor: string;
+  hairColor?: string;
+  skinTone?: string;
+  bloodGroup: string;
   birthmark?: string;
-  disease?: string;
-  passion: string;
-  trait: string;
-  nature: string;
-  about: string;
-  images?: string[];
-  videos?: string[];
+  freckles?: string;
+  baldness?: string;
+  beardStyleTrend?: string;
+  conditionDiabetes?: string;
+  conditionHeartIssue?: string;
+  conditionAsthma?: string;
+  conditionColorBlindness?: string;
+  leftHanded?: string;
+  isTwin?: string;
+  natureOfPerson: string;
+  recipesCuisine?: string;
+  familyTraditions?: string;
+  nativeLocation?: string;
+  migrationPath?: string;
+  socioeconomicStatus?: string;
+  educationLevel?: string;
+  similarity_score?: number;
 }
+
+// Blood group options
+export const bloodGroups = ['A', 'B', 'AB', 'O'];
+
+// Eye color options
+export const eyeColors = ['Brown', 'Blue', 'Green', 'Hazel'];
+
+// Hair color options  
+export const hairColors = ['Black', 'Brown', 'Blonde', 'Red', 'Gray'];
+
+// Skin tone options
+export const skinTones = ['Light', 'Medium', 'Dark'];
+
+// Gender options
+export const genders = ['M', 'F'];
+
+// Ethnicity options
+export const ethnicities = [
+  'East Asian', 'South Asian', 'Western European', 'African', 'Mixed'
+];
+
+// Yes/No options for conditions
+export const yesNoOptions = ['Yes', 'No'];
+
+// Education levels
+export const educationLevels = [
+  'High School', 'Bachelor\'s', 'Master\'s', 'PhD'
+];
+
+// Socioeconomic status options
+export const socioeconomicStatuses = ['Low', 'Medium', 'High'];
+
+// Nature of person options
+export const natureOptions = [
+  'Aggressive', 'Artistic', 'Calm', 'Extrovert', 'Introvert', 'Spiritual'
+];
+
+// Beard style options (for males)
+export const beardStyles = [
+  'Clean Shaven', 'Stubble', 'Moustache', 'Full Beard', 'Hipster Beard', 'Designer Stubble'
+];
+
+// Recipe cuisine options
+export const recipeCuisines = [
+  'Sweet_R1', 'Sweet_R2', 'Sweet_R3', 'Festive_F1', 'Festive_F2', 'Festive_F3'
+];
+
+// Family traditions options
+export const familyTraditions = [
+  'Festival_U1', 'Festival_U2', 'Festival_U3', 'Ritual_S1', 'Ritual_S2', 'Ritual_S3'
+];
 
 // Generate unique ID
 export const generateId = (): string => {
@@ -66,6 +136,3 @@ export const searchFamilyMembers = (query: Partial<FamilyMember>): FamilyMember[
     });
   });
 };
-
-export const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-export const eyeColors = ['Brown', 'Blue', 'Green', 'Hazel', 'Gray', 'Amber'];

@@ -1,11 +1,47 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Heart, User, Calendar, Droplets, Eye, Users, Star, TreePine, Edit } from 'lucide-react';
-import { getFamilyMemberById, getFamilyMembers, type FamilyMember } from '@/lib/familyData';
+import { ArrowLeft, Heart, User, Calendar, Droplets, Eye, Users, Star, TreePine, Edit, MapPin, GraduationCap, Home } from 'lucide-react';
+import { type FamilyMember } from '@/lib/familyData';
+
+// API configuration
+const API_BASE_URL = 'http://127.0.0.1:5000';
+
+// API functions
+const searchFamilyMembers = async (query: any = {}): Promise<FamilyMember[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(query),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch family members');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching family members:', error);
+    return [];
+  }
+};
+
+const getFamilyMemberById = async (personId: string): Promise<FamilyMember | null> => {
+  const members = await searchFamilyMembers({ personId });
+  return members.length > 0 ? members[0] : null;
+};
+
+const getFamilyMembers = async (): Promise<FamilyMember[]> => {
+  return await searchFamilyMembers({});
+};
 
 const Profile = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,14 +50,25 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      const foundMember = getFamilyMemberById(id);
-      const allMembers = getFamilyMembers();
-      
-      setMember(foundMember || null);
-      setFamilyMembers(allMembers);
-      setLoading(false);
-    }
+    const fetchData = async () => {
+      if (id) {
+        try {
+          const [foundMember, allMembers] = await Promise.all([
+            getFamilyMemberById(id),
+            getFamilyMembers()
+          ]);
+          
+          setMember(foundMember);
+          setFamilyMembers(allMembers);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchData();
   }, [id]);
 
   if (loading) {
@@ -58,11 +105,14 @@ const Profile = () => {
   const getRelatedMembers = () => {
     return familyMembers.filter(m => 
       m.personId !== member.personId && (
-        m.familyId === member.familyId ||
+        m.familyLineId === member.familyLineId ||
         m.fatherId === member.personId ||
         m.motherId === member.personId ||
+        m.spouseId === member.personId ||
         m.personId === member.fatherId ||
-        m.personId === member.motherId
+        m.personId === member.motherId ||
+        m.personId === member.spouseId ||
+        m.sharedAncestryKey === member.sharedAncestryKey
       )
     );
   };
@@ -83,9 +133,19 @@ const Profile = () => {
           
           <div className="text-center">
             <h1 className="text-4xl font-bold text-foreground mb-2">
-              {member.firstName} {member.lastName}
+              {member.firstName}
             </h1>
             <p className="text-lg text-muted-foreground">Sacred Family Profile</p>
+            <div className="flex justify-center items-center space-x-4 mt-2">
+              <Badge className="bg-divine text-divine-foreground">
+                Generation {member.generation}
+              </Badge>
+              {member.familyLineId && (
+                <Badge variant="outline">
+                  Line: {member.familyLineId}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
 
@@ -108,15 +168,16 @@ const Profile = () => {
                       <p className="text-foreground font-mono">{member.personId}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Family ID</label>
-                      <p className="text-foreground font-mono">{member.familyId}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Family Line ID</label>
+                      <p className="text-foreground font-mono">{member.familyLineId || 'Not specified'}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground flex items-center space-x-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>Birth Year</span>
-                      </label>
-                      <p className="text-foreground">{member.birthYear}</p>
+                      <label className="text-sm font-medium text-muted-foreground">Gender</label>
+                      <p className="text-foreground">{member.gender === 'M' ? 'Male' : member.gender === 'F' ? 'Female' : member.gender}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Ethnicity</label>
+                      <p className="text-foreground">{member.ethnicity || 'Not specified'}</p>
                     </div>
                   </div>
                   
@@ -148,76 +209,238 @@ const Profile = () => {
                         {member.eyeColor}
                       </Badge>
                     </div>
+                    {member.hairColor && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Hair Color</label>
+                        <Badge variant="outline">
+                          {member.hairColor}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {member.birthmark && (
-                  <div className="mt-6">
-                    <label className="text-sm font-medium text-muted-foreground">Birthmark</label>
-                    <p className="text-foreground">{member.birthmark}</p>
+                {/* Date Information */}
+                {(member.dob || member.dod) && (
+                  <div className="mt-6 grid md:grid-cols-2 gap-4">
+                    {member.dob && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground flex items-center space-x-1">
+                          <Calendar className="w-4 h-4" />
+                          <span>Date of Birth</span>
+                        </label>
+                        <p className="text-foreground">{new Date(member.dob).toLocaleDateString()}</p>
+                      </div>
+                    )}
+                    {member.dod && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground flex items-center space-x-1">
+                          <Calendar className="w-4 h-4" />
+                          <span>Date of Death</span>
+                        </label>
+                        <p className="text-foreground">{new Date(member.dod).toLocaleDateString()}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {member.disease && (
-                  <div className="mt-4">
-                    <label className="text-sm font-medium text-muted-foreground">Health Conditions</label>
-                    <p className="text-foreground">{member.disease}</p>
+                {/* Physical Characteristics */}
+                <div className="mt-6">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Physical Characteristics</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {member.skinTone && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">Skin Tone</label>
+                        <p className="text-sm text-foreground">{member.skinTone}</p>
+                      </div>
+                    )}
+                    {member.birthmark && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">Birthmark</label>
+                        <p className="text-sm text-foreground">{member.birthmark}</p>
+                      </div>
+                    )}
+                    {member.freckles && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">Freckles</label>
+                        <p className="text-sm text-foreground">{member.freckles}</p>
+                      </div>
+                    )}
+                    {member.beardStyleTrend && (
+                      <div>
+                        <label className="text-xs text-muted-foreground">Beard Style</label>
+                        <p className="text-sm text-foreground">{member.beardStyleTrend}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
 
-            {/* Spiritual Attributes */}
+            {/* Health & Personal Traits */}
             <Card className="bg-card/80 backdrop-blur-sm border-0 shadow-sacred">
               <CardHeader className="bg-gradient-sacred text-sacred-foreground rounded-t-lg">
                 <CardTitle className="flex items-center space-x-2">
                   <Star className="w-6 h-6" />
-                  <span>Spiritual Essence</span>
+                  <span>Health & Personal Traits</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-spiritual flex items-center justify-center">
-                      <Heart className="w-8 h-8 text-white" />
-                    </div>
-                    <label className="text-sm font-medium text-muted-foreground">Passion</label>
-                    <p className="text-lg font-semibold text-foreground">{member.passion}</p>
+                {/* Health Conditions */}
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Health Information</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {member.conditionDiabetes && (
+                      <div className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-red-100 flex items-center justify-center">
+                          <Heart className="w-6 h-6 text-red-600" />
+                        </div>
+                        <label className="text-xs text-muted-foreground">Diabetes</label>
+                        <p className="text-sm font-medium text-foreground">{member.conditionDiabetes}</p>
+                      </div>
+                    )}
+                    {member.conditionHeartIssue && (
+                      <div className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-red-100 flex items-center justify-center">
+                          <Heart className="w-6 h-6 text-red-600" />
+                        </div>
+                        <label className="text-xs text-muted-foreground">Heart Issues</label>
+                        <p className="text-sm font-medium text-foreground">{member.conditionHeartIssue}</p>
+                      </div>
+                    )}
+                    {member.conditionAsthma && (
+                      <div className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Star className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <label className="text-xs text-muted-foreground">Asthma</label>
+                        <p className="text-sm font-medium text-foreground">{member.conditionAsthma}</p>
+                      </div>
+                    )}
+                    {member.conditionColorBlindness && (
+                      <div className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-purple-100 flex items-center justify-center">
+                          <Eye className="w-6 h-6 text-purple-600" />
+                        </div>
+                        <label className="text-xs text-muted-foreground">Color Blindness</label>
+                        <p className="text-sm font-medium text-foreground">{member.conditionColorBlindness}</p>
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-divine flex items-center justify-center">
-                      <Star className="w-8 h-8 text-white" />
-                    </div>
-                    <label className="text-sm font-medium text-muted-foreground">Trait</label>
-                    <p className="text-lg font-semibold text-foreground">{member.trait}</p>
-                  </div>
-                  
-                  <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-sacred flex items-center justify-center">
-                      <TreePine className="w-8 h-8 text-white" />
-                    </div>
-                    <label className="text-sm font-medium text-muted-foreground">Nature</label>
-                    <p className="text-lg font-semibold text-foreground">{member.nature}</p>
+                </div>
+
+                {/* Personal Traits */}
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Personal Traits</h4>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    {member.natureOfPerson && (
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-spiritual flex items-center justify-center">
+                          <TreePine className="w-8 h-8 text-white" />
+                        </div>
+                        <label className="text-sm font-medium text-muted-foreground">Nature</label>
+                        <p className="text-lg font-semibold text-foreground">{member.natureOfPerson}</p>
+                      </div>
+                    )}
+                    
+                    {member.leftHanded && (
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-divine flex items-center justify-center">
+                          <User className="w-8 h-8 text-white" />
+                        </div>
+                        <label className="text-sm font-medium text-muted-foreground">Left Handed</label>
+                        <p className="text-lg font-semibold text-foreground">{member.leftHanded}</p>
+                      </div>
+                    )}
+                    
+                    {member.isTwin && (
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-sacred flex items-center justify-center">
+                          <Users className="w-8 h-8 text-white" />
+                        </div>
+                        <label className="text-sm font-medium text-muted-foreground">Twin</label>
+                        <p className="text-lg font-semibold text-foreground">{member.isTwin}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* About Section */}
-            {member.about && (
-              <Card className="bg-card/80 backdrop-blur-sm border-0 shadow-divine">
-                <CardHeader className="bg-gradient-divine text-divine-foreground rounded-t-lg">
-                  <CardTitle className="flex items-center space-x-2">
-                    <Edit className="w-6 h-6" />
-                    <span>About {member.firstName}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <p className="text-foreground leading-relaxed whitespace-pre-wrap">{member.about}</p>
-                </CardContent>
-              </Card>
-            )}
+            {/* Cultural & Location Information */}
+            <Card className="bg-card/80 backdrop-blur-sm border-0 shadow-divine">
+              <CardHeader className="bg-gradient-divine text-divine-foreground rounded-t-lg">
+                <CardTitle className="flex items-center space-x-2">
+                  <MapPin className="w-6 h-6" />
+                  <span>Cultural Heritage</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {member.nativeLocation && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground flex items-center space-x-1">
+                        <MapPin className="w-4 h-4" />
+                        <span>Native Location</span>
+                      </label>
+                      <p className="text-foreground font-medium">{member.nativeLocation}</p>
+                    </div>
+                  )}
+                  
+                  {member.migrationPath && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground flex items-center space-x-1">
+                        <Home className="w-4 h-4" />
+                        <span>Migration Path</span>
+                      </label>
+                      <p className="text-foreground">{member.migrationPath}</p>
+                    </div>
+                  )}
+
+                  {member.recipesCuisine && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Cuisine Preference</label>
+                      <Badge variant="outline" className="mt-1">
+                        {member.recipesCuisine}
+                      </Badge>
+                    </div>
+                  )}
+
+                  {member.familyTraditions && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Family Traditions</label>
+                      <Badge variant="outline" className="mt-1">
+                        {member.familyTraditions}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Socioeconomic Information */}
+                <div className="mt-6 grid md:grid-cols-2 gap-4">
+                  {member.educationLevel && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground flex items-center space-x-1">
+                        <GraduationCap className="w-4 h-4" />
+                        <span>Education Level</span>
+                      </label>
+                      <Badge className="bg-spiritual text-spiritual-foreground mt-1">
+                        {member.educationLevel}
+                      </Badge>
+                    </div>
+                  )}
+
+                  {member.socioeconomicStatus && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Socioeconomic Status</label>
+                      <Badge variant="secondary" className="mt-1">
+                        {member.socioeconomicStatus}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
@@ -245,6 +468,20 @@ const Profile = () => {
                   </div>
                 )}
 
+                {member.spouseId && (
+                  <div className="mb-3">
+                    <label className="text-sm font-medium text-muted-foreground">Spouse ID</label>
+                    <p className="text-foreground font-mono text-sm">{member.spouseId}</p>
+                  </div>
+                )}
+
+                {member.sharedAncestryKey && (
+                  <div className="mb-3">
+                    <label className="text-sm font-medium text-muted-foreground">Shared Ancestry</label>
+                    <p className="text-foreground font-mono text-sm">{member.sharedAncestryKey}</p>
+                  </div>
+                )}
+
                 {relatedMembers.length > 0 && (
                   <>
                     <Separator className="my-4" />
@@ -258,7 +495,7 @@ const Profile = () => {
                             className="block p-2 rounded-lg hover:bg-muted/50 transition-colors"
                           >
                             <p className="text-sm font-medium text-foreground">
-                              {related.firstName} {related.lastName}
+                              {related.firstName}
                             </p>
                             <p className="text-xs text-muted-foreground">Gen {related.generation}</p>
                           </Link>
