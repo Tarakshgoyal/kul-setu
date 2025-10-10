@@ -23,7 +23,7 @@ import {
   type FamilyMember 
 } from '@/lib/familyData';
 
-const API_URL = "http://127.0.0.1:5000";
+const API_URL = "https://kul-setu-backend.onrender.com";
 
 const Register = () => {
   const { toast } = useToast();

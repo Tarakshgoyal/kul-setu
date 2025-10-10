@@ -10,7 +10,7 @@ import { ArrowLeft, Heart, User, Calendar, Droplets, Eye, Users, Star, TreePine,
 import { type FamilyMember } from '@/lib/familyData';
 
 // API configuration
-const API_BASE_URL = 'http://127.0.0.1:5000';
+const API_BASE_URL = 'https://kul-setu-backend.onrender.com';
 
 // API functions
 const searchFamilyMembers = async (query: any = {}): Promise<FamilyMember[]> => {

@@ -24,7 +24,7 @@ import {
   type FamilyMember 
 } from '@/lib/familyData';
 
-const API_URL = "http://127.0.0.1:5000";
+const API_URL = "https://kul-setu-backend.onrender.com";
 
 const Search = () => {
   const [searchQuery, setSearchQuery] = useState<Partial<FamilyMember>>({});
@@ -41,13 +41,24 @@ const Search = () => {
     })
       .then(res => {
         console.log("Response status:", res.status);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
         return res.json();
       })
       .then(data => {
         console.log("Received data:", data?.length, "members");
-        setResults(data);
+        if (Array.isArray(data)) {
+          setResults(data);
+        } else {
+          console.error("Expected array but received:", data);
+          setResults([]);
+        }
       })
-      .catch(err => console.error("Error fetching members:", err));
+      .catch(err => {
+        console.error("Error fetching members:", err);
+        setResults([]); // Set empty array on error
+      });
   }, []);
 
   // Search button handler → call backend
@@ -61,11 +72,23 @@ const Search = () => {
         body: JSON.stringify(searchQuery),
       });
       console.log("Search response status:", res.status);
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
       console.log("Search results:", data?.length, "members");
-      setResults(data);
+      
+      if (Array.isArray(data)) {
+        setResults(data);
+      } else {
+        console.error("Expected array but received:", data);
+        setResults([]);
+      }
     } catch (err) {
       console.error("Search failed:", err);
+      setResults([]);
     }
     setLoading(false);
   };
@@ -80,10 +103,21 @@ const Search = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
-      setResults(data);
+      if (Array.isArray(data)) {
+        setResults(data);
+      } else {
+        console.error("Expected array but received:", data);
+        setResults([]);
+      }
     } catch (err) {
       console.error("Reset failed:", err);
+      setResults([]);
     }
     setLoading(false);
   };
@@ -358,11 +392,17 @@ const Search = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-foreground flex items-center">
               <Users className="w-6 h-6 mr-2 text-spiritual" />
-              Search Results ({results.length})
+              Search Results ({Array.isArray(results) ? results.length : 0})
             </h2>
           </div>
 
-          {results.length === 0 ? (
+          {loading ? (
+            <Card className="p-8 text-center bg-card/80 backdrop-blur-sm border-0 shadow-spiritual">
+              <div className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4 animate-spin">⏳</div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">Searching...</h3>
+              <p className="text-muted-foreground">Please wait while we find your family members.</p>
+            </Card>
+          ) : !Array.isArray(results) || results.length === 0 ? (
             <Card className="p-8 text-center bg-card/80 backdrop-blur-sm border-0 shadow-spiritual">
               <Heart className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
               <h3 className="text-xl font-semibold text-foreground mb-2">No family members found</h3>
@@ -370,7 +410,7 @@ const Search = () => {
             </Card>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {results.map((member) => (
+              {Array.isArray(results) && results.map((member) => (
                 <Card key={member.personId} className="bg-card/80 backdrop-blur-sm border-0 shadow-spiritual hover:shadow-lg transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">

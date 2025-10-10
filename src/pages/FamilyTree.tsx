@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const API_URL = "http://127.0.0.1:5000";
+const API_URL = "https://kul-setu-backend.onrender.com";
 
 interface TreeNode {
   member: FamilyMember;
