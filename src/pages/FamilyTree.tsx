@@ -2,10 +2,11 @@ import { useEffect, useState, useRef } from 'react';
 import { type FamilyMember } from '@/lib/familyData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { TreePine, Users, ZoomIn, ZoomOut, Heart, ChevronDown } from 'lucide-react';
+import { TreePine, Users, ZoomIn, ZoomOut, Heart, ChevronDown, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getUser } from '@/lib/auth';
 
 const API_URL = "https://kul-setu-backend.onrender.com";
 
@@ -25,6 +26,8 @@ const FamilyTree = () => {
   const [loading, setLoading] = useState(true);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [showRootView, setShowRootView] = useState(false);
+  const [userFamilyId, setUserFamilyId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
@@ -32,6 +35,12 @@ const FamilyTree = () => {
   useEffect(() => {
     const fetchFamilyMembers = async () => {
       try {
+        // Check if user is logged in and get their family ID
+        const loggedInUser = getUser();
+        if (loggedInUser?.familyId) {
+          setUserFamilyId(loggedInUser.familyId);
+        }
+
         console.log("Fetching family members from backend...");
         const response = await fetch(`${API_URL}/search`, {
           method: "POST",
@@ -57,9 +66,13 @@ const FamilyTree = () => {
         
         setFamilyLines(uniqueFamilyLines);
         
-        // Set first family as default if available
-        if (uniqueFamilyLines.length > 0) {
+        // If user is logged in, show their family first, otherwise show first available family
+        if (loggedInUser?.familyId && uniqueFamilyLines.includes(loggedInUser.familyId)) {
+          setSelectedFamily(loggedInUser.familyId);
+          setShowRootView(false); // Start with personal view
+        } else if (uniqueFamilyLines.length > 0) {
           setSelectedFamily(uniqueFamilyLines[0]);
+          setShowRootView(true); // Show root view if no personal family found
         }
       } catch (error) {
         console.error('Error fetching family members:', error);
@@ -75,14 +88,53 @@ const FamilyTree = () => {
     if (selectedFamily && members.length > 0) {
       const familyMembers = members.filter(m => m.familyLineId === selectedFamily);
       if (familyMembers.length > 0) {
-        const tree = buildTree(familyMembers);
+        const tree = showRootView ? buildTree(familyMembers) : buildImmediateFamily(familyMembers);
         setTreeData(tree);
         // Reset view when family changes
         setPosition({ x: 50, y: 50 });
         setScale(1);
       }
     }
-  }, [selectedFamily, members]);
+  }, [selectedFamily, members, showRootView, userFamilyId]);
+
+  const buildImmediateFamily = (familyMembers: FamilyMember[]): TreeNode[] => {
+    // Get the logged-in user
+    const loggedInUser = getUser();
+    if (!loggedInUser?.personId) return [];
+
+    // Find the logged-in user's family member record
+    const userMember = familyMembers.find(m => m.personId === loggedInUser.personId);
+    if (!userMember) return [];
+
+    // Find spouse
+    const spouse = familyMembers.find(m => m.personId === userMember.spouseId);
+
+    // Find children (where user or spouse is parent)
+    const children = familyMembers.filter(m => 
+      m.fatherId === userMember.personId || 
+      m.motherId === userMember.personId ||
+      (spouse && (m.fatherId === spouse.personId || m.motherId === spouse.personId))
+    );
+
+    // Build the immediate family tree with user as root
+    const childNodes = children.map((child, idx) => ({
+      member: child,
+      children: [], // Don't show grandchildren in immediate family view
+      x: idx * 320,
+      y: 280,
+      spouse: undefined
+    }));
+
+    const userNode: TreeNode = {
+      member: userMember,
+      children: childNodes,
+      x: Math.max(0, (children.length - 1) * 160), // Center the user above children
+      y: 0,
+      spouse: spouse
+    };
+
+    return [userNode];
+  };
 
   const buildTree = (familyMembers: FamilyMember[]): TreeNode[] => {
     // Find root members (those without parents in the system or earliest generation)
@@ -277,28 +329,60 @@ const FamilyTree = () => {
             <TreePine className="w-16 h-16 text-spiritual animate-glow" />
           </div>
           <h1 className="text-5xl font-bold mb-4 bg-gradient-spiritual bg-clip-text text-transparent">
-            Family Tree
+            {showRootView ? 'Family Tree - Root View' : 'My Immediate Family'}
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-6">
-            Visualize your sacred lineage and spiritual heritage
+            {showRootView ? 'Browse all family lineages and spiritual heritage' : 'Your spouse and children - your closest family bonds'}
           </p>
           
-          {/* Family Selector */}
+          {/* View Toggle and Family Selector */}
           {!loading && familyLines.length > 0 && (
             <div className="flex justify-center items-center space-x-4 mb-6">
-              <label className="text-sm font-medium text-foreground">Select Family Line:</label>
-              <Select value={selectedFamily} onValueChange={setSelectedFamily}>
-                <SelectTrigger className="w-64 border-spiritual/20">
-                  <SelectValue placeholder="Choose a family line" />
-                </SelectTrigger>
-                <SelectContent>
-                  {familyLines.map(familyId => (
-                    <SelectItem key={familyId} value={familyId}>
-                      Family Line: {familyId}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Root View Toggle Button */}
+              {userFamilyId && (
+                <Button
+                  onClick={() => {
+                    setShowRootView(!showRootView);
+                    if (!showRootView) {
+                      // Switching to root view - keep current selection or show all
+                    } else {
+                      // Switching to immediate family view - show user's family
+                      setSelectedFamily(userFamilyId);
+                    }
+                  }}
+                  variant={showRootView ? "default" : "outline"}
+                  className={showRootView ? "bg-spiritual text-white" : "border-spiritual/20 text-spiritual"}
+                >
+                  <TreePine className="w-4 h-4 mr-2" />
+                  {showRootView ? 'My Family' : 'Full Tree'}
+                </Button>
+              )}
+              
+              {/* Family Selector - only show in root view or if no user family */}
+              {(showRootView || !userFamilyId) && (
+                <>
+                  <label className="text-sm font-medium text-foreground">Select Family Line:</label>
+                  <Select value={selectedFamily} onValueChange={setSelectedFamily}>
+                    <SelectTrigger className="w-64 border-spiritual/20">
+                      <SelectValue placeholder="Choose a family line" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {familyLines.map(familyId => (
+                        <SelectItem key={familyId} value={familyId}>
+                          Family Line: {familyId}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
+              
+              {/* Show current family info in personal view */}
+              {!showRootView && userFamilyId && (
+                <div className="text-sm text-muted-foreground">
+                  Viewing: Family Line {userFamilyId}
+                </div>
+              )}
             </div>
           )}
 
@@ -307,15 +391,25 @@ const FamilyTree = () => {
             <div className="flex justify-center space-x-8 mt-4">
               <div className="text-center">
                 <div className="text-lg font-bold text-spiritual">
-                  {members.filter(m => m.familyLineId === selectedFamily).length}
+                  {showRootView 
+                    ? members.filter(m => m.familyLineId === selectedFamily).length
+                    : treeData.length > 0 ? 1 + (treeData[0].spouse ? 1 : 0) + treeData[0].children.length : 0
+                  }
                 </div>
-                <div className="text-xs text-muted-foreground">Members in Family</div>
+                <div className="text-xs text-muted-foreground">
+                  {showRootView ? 'Members in Family' : 'Immediate Family'}
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-spiritual">
-                  {Math.max(...members.filter(m => m.familyLineId === selectedFamily).map(m => m.generation))}
+                  {showRootView 
+                    ? Math.max(...members.filter(m => m.familyLineId === selectedFamily).map(m => m.generation))
+                    : treeData.length > 0 ? Math.max(1, treeData[0].children.length > 0 ? 2 : 1) : 1
+                  }
                 </div>
-                <div className="text-xs text-muted-foreground">Generations</div>
+                <div className="text-xs text-muted-foreground">
+                  {showRootView ? 'Generations' : 'Family Levels'}
+                </div>
               </div>
             </div>
           )}
@@ -328,6 +422,54 @@ const FamilyTree = () => {
               <p className="text-lg text-muted-foreground">Loading family trees...</p>
             </div>
           </div>
+        ) : !userFamilyId && !showRootView ? (
+          <Card className="max-w-md mx-auto border-spiritual/20">
+            <CardContent className="text-center py-12">
+              <Heart className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground mb-4">Please log in to view your immediate family</p>
+              <p className="text-xs text-muted-foreground mb-4">Or switch to Full Tree to browse all families</p>
+              <div className="space-y-2">
+                <Link 
+                  to="/auth" 
+                  className="block text-spiritual hover:underline font-medium"
+                >
+                  Log in to your account
+                </Link>
+                <Button
+                  onClick={() => setShowRootView(true)}
+                  variant="outline"
+                  className="border-spiritual/20 text-spiritual"
+                >
+                  <TreePine className="w-4 h-4 mr-2" />
+                  Browse Full Family Tree
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : !showRootView && treeData.length === 0 ? (
+          <Card className="max-w-md mx-auto border-spiritual/20">
+            <CardContent className="text-center py-12">
+              <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground mb-4">No immediate family members found</p>
+              <p className="text-xs text-muted-foreground mb-4">You might not be registered in the family database yet</p>
+              <div className="space-y-2">
+                <Link 
+                  to="/register" 
+                  className="block text-spiritual hover:underline font-medium"
+                >
+                  Register your family profile
+                </Link>
+                <Button
+                  onClick={() => setShowRootView(true)}
+                  variant="outline"
+                  className="border-spiritual/20 text-spiritual"
+                >
+                  <TreePine className="w-4 h-4 mr-2" />
+                  Browse Full Family Tree
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : members.length === 0 ? (
           <Card className="max-w-md mx-auto border-spiritual/20">
             <CardContent className="text-center py-12">

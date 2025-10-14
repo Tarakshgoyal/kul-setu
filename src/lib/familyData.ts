@@ -35,6 +35,8 @@ export interface FamilyMember {
   migrationPath?: string;
   socioeconomicStatus?: string;
   educationLevel?: string;
+  passion?: string;
+  disability?: string;
   similarity_score?: number;
 }
 

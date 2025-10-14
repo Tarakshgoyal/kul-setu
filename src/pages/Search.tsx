@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Search as SearchIcon, Users, Heart, Eye, Droplets, User, Calendar, MapPin } from 'lucide-react';
+import { apiClient, FamilyMember, SearchParams } from '@/lib/api';
 import { 
   bloodGroups, 
   eyeColors, 
@@ -20,45 +21,31 @@ import {
   natureOptions, 
   beardStyles, 
   recipeCuisines, 
-  familyTraditions,
-  type FamilyMember 
+  familyTraditions 
 } from '@/lib/familyData';
 
-const API_URL = "https://kul-setu-backend.onrender.com";
-
 const Search = () => {
-  const [searchQuery, setSearchQuery] = useState<Partial<FamilyMember>>({});
+  const [searchQuery, setSearchQuery] = useState<SearchParams>({});
   const [results, setResults] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Load all members initially
   useEffect(() => {
-    console.log("Loading initial data from:", `${API_URL}/search`);
-    fetch(`${API_URL}/search`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}) // empty search = return all
-    })
-      .then(res => {
-        console.log("Response status:", res.status);
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(data => {
-        console.log("Received data:", data?.length, "members");
-        if (Array.isArray(data)) {
-          setResults(data);
-        } else {
-          console.error("Expected array but received:", data);
-          setResults([]);
-        }
-      })
-      .catch(err => {
+    const loadAllMembers = async () => {
+      try {
+        console.log("Loading all members...");
+        const response = await apiClient.searchMembers({});
+        console.log("Received data:", response);
+        setResults(response.results || []);
+        setTotalCount(response.count || 0);
+      } catch (err) {
         console.error("Error fetching members:", err);
-        setResults([]); // Set empty array on error
-      });
+        setResults([]);
+        setTotalCount(0);
+      }
+    };
+    loadAllMembers();
   }, []);
 
   // Search button handler → call backend
@@ -66,29 +53,14 @@ const Search = () => {
     setLoading(true);
     console.log("Searching with query:", searchQuery);
     try {
-      const res = await fetch(`${API_URL}/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(searchQuery),
-      });
-      console.log("Search response status:", res.status);
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      
-      const data = await res.json();
-      console.log("Search results:", data?.length, "members");
-      
-      if (Array.isArray(data)) {
-        setResults(data);
-      } else {
-        console.error("Expected array but received:", data);
-        setResults([]);
-      }
+      const response = await apiClient.searchMembers(searchQuery);
+      console.log("Search results:", response);
+      setResults(response.results || []);
+      setTotalCount(response.count || 0);
     } catch (err) {
       console.error("Search failed:", err);
       setResults([]);
+      setTotalCount(0);
     }
     setLoading(false);
   };
@@ -98,32 +70,17 @@ const Search = () => {
     setSearchQuery({});
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setResults(data);
-      } else {
-        console.error("Expected array but received:", data);
-        setResults([]);
-      }
+      const response = await apiClient.searchMembers({});
+      setResults(response.results || []);
+      setTotalCount(response.count || 0);
     } catch (err) {
       console.error("Reset failed:", err);
       setResults([]);
+      setTotalCount(0);
     }
     setLoading(false);
-  };
-
-  // Input handler
-  const handleInputChange = (field: keyof FamilyMember, value: string) => {
+  };  // Input handler
+  const handleInputChange = (field: keyof SearchParams, value: string) => {
     setSearchQuery(prev => ({
       ...prev,
       [field]: value === "all" || value === "" ? undefined : value || undefined,
@@ -392,7 +349,7 @@ const Search = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-foreground flex items-center">
               <Users className="w-6 h-6 mr-2 text-spiritual" />
-              Search Results ({Array.isArray(results) ? results.length : 0})
+              Search Results ({totalCount} total, {Array.isArray(results) ? results.length : 0} shown)
             </h2>
           </div>
 

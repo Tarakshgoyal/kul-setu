@@ -136,6 +136,33 @@ const Profile = () => {
               {member.firstName}
             </h1>
             <p className="text-lg text-muted-foreground">Sacred Family Profile</p>
+            
+            {/* Status Bar */}
+            <div className="flex justify-center mt-4 mb-4">
+              <div className={`
+                px-6 py-3 rounded-full text-white font-semibold text-lg shadow-lg
+                ${member.dod 
+                  ? 'bg-gradient-to-r from-slate-600 to-slate-800 border-2 border-slate-400' 
+                  : 'bg-gradient-to-r from-green-500 to-emerald-600 border-2 border-green-300'
+                }
+              `}>
+                <div className="flex items-center space-x-2">
+                  <div className={`
+                    w-3 h-3 rounded-full animate-pulse
+                    ${member.dod ? 'bg-slate-300' : 'bg-green-200'}
+                  `}></div>
+                  <span>
+                    {member.dod ? 'Deceased' : 'Living'}
+                  </span>
+                  {member.dod && (
+                    <span className="text-slate-200 text-sm">
+                      ({new Date(member.dod).toLocaleDateString()})
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            
             <div className="flex justify-center items-center space-x-4 mt-2">
               <Badge className="bg-divine text-divine-foreground">
                 Generation {member.generation}
@@ -166,6 +193,24 @@ const Profile = () => {
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Person ID</label>
                       <p className="text-foreground font-mono">{member.personId}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Status</label>
+                      <div className="flex items-center space-x-2">
+                        <div className={`
+                          w-2 h-2 rounded-full
+                          ${member.dod ? 'bg-slate-400' : 'bg-green-500 animate-pulse'}
+                        `}></div>
+                        <Badge 
+                          variant={member.dod ? "secondary" : "default"}
+                          className={member.dod 
+                            ? "bg-slate-100 text-slate-700 border-slate-300" 
+                            : "bg-green-100 text-green-700 border-green-300"
+                          }
+                        >
+                          {member.dod ? 'Deceased' : 'Living'}
+                        </Badge>
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Family Line ID</label>
@@ -239,6 +284,14 @@ const Profile = () => {
                           <span>Date of Death</span>
                         </label>
                         <p className="text-foreground">{new Date(member.dod).toLocaleDateString()}</p>
+                        {member.causeOfDeath && (
+                          <div className="mt-2">
+                            <label className="text-xs text-muted-foreground">Cause of Death</label>
+                            <Badge variant="outline" className="ml-1 bg-slate-50 text-slate-700 border-slate-300">
+                              {member.causeOfDeath}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

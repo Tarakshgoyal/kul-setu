@@ -6,9 +6,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navigation from "./components/Navigation";
 import Home from "./pages/Home";
 import Register from "./pages/Register";
+import RegisterNew from "./pages/RegisterNew";
+import ComprehensiveRegister from "./pages/ComprehensiveRegister";
 import Search from "./pages/Search";
 import FamilyTree from "./pages/FamilyTree";
 import Profile from "./pages/Profile";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +26,10 @@ const App = () => (
           <Navigation />
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/register" element={<ComprehensiveRegister />} />
+            <Route path="/register-simple" element={<RegisterNew />} />
+            <Route path="/register-old" element={<Register />} />
             <Route path="/search" element={<Search />} />
             <Route path="/tree" element={<FamilyTree />} />
             <Route path="/profile/:id" element={<Profile />} />

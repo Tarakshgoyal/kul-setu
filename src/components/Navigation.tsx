@@ -1,8 +1,13 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Home, UserPlus, Search, Heart, TreePine } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home, UserPlus, Search, Heart, TreePine, LogIn, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { getUser, logout } from '@/lib/auth';
+import { toast } from 'sonner';
 
 const Navigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const user = getUser();
   
   const navItems = [
     { path: '/', label: 'Home', icon: Home },
@@ -13,6 +18,12 @@ const Navigation = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+    navigate('/auth');
+  };
+
   return (
     <nav className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -22,7 +33,7 @@ const Navigation = () => {
             <span className="bg-gradient-spiritual bg-clip-text text-transparent">Kul Setu</span>
           </Link>
           
-          <div className="flex space-x-6">
+          <div className="flex items-center space-x-6">
             {navItems.map(({ path, label, icon: Icon }) => (
               <Link
                 key={path}
@@ -37,6 +48,29 @@ const Navigation = () => {
                 <span className="hidden sm:inline">{label}</span>
               </Link>
             ))}
+            
+            {user ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="flex items-center space-x-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            ) : (
+              <Link to="/auth">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="hidden sm:inline">Login</span>
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
