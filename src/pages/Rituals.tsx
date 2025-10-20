@@ -45,6 +45,7 @@ const Rituals = () => {
   const [ritualTypes, setRitualTypes] = useState<RitualTypes | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedRitual, setSelectedRitual] = useState<Ritual | null>(null);
@@ -89,8 +90,21 @@ const Rituals = () => {
       }
 
       // Get user's family ID from localStorage
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const familyId = user.familyId || 'F01';
+      const user = JSON.parse(localStorage.getItem('kulSetuUser') || '{}');
+      const familyId = user.familyId;
+
+      if (!familyId) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in to view your family rituals',
+          variant: 'destructive',
+        });
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
 
       // Load family rituals
       const ritualsRes = await fetch(`${API_URL}/rituals/${familyId}`);
@@ -266,12 +280,12 @@ const Rituals = () => {
   };
 
   const resetForm = () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(localStorage.getItem('kulSetuUser') || '{}');
     setFormData({
       ritualType: '',
       ritualName: '',
       ritualDate: '',
-      familyId: user.familyId || 'F01',
+      familyId: user.familyId || '',
       personId: '',
       recurring: false,
       recurrencePattern: '',
@@ -355,6 +369,25 @@ const Rituals = () => {
             <p className="text-muted-foreground">Loading rituals...</p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="max-w-2xl mx-auto">
+          <CardContent className="flex flex-col items-center justify-center h-96 text-center p-8">
+            <Calendar className="h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Authentication Required</h2>
+            <p className="text-muted-foreground mb-6">
+              Please log in to view and manage your family's ritual reminders.
+            </p>
+            <Button onClick={() => window.location.href = '/auth'}>
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

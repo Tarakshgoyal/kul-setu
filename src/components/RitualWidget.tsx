@@ -25,8 +25,14 @@ const RitualWidget = () => {
 
   const loadUpcomingRituals = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const familyId = user.familyId || 'F01';
+      const user = JSON.parse(localStorage.getItem('kulSetuUser') || '{}');
+      const familyId = user.familyId;
+
+      if (!familyId) {
+        setUpcomingRituals([]);
+        setLoading(false);
+        return;
+      }
 
       const response = await fetch(`${API_URL}/rituals/upcoming?familyId=${familyId}&daysAhead=7`);
       if (!response.ok) {
