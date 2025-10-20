@@ -83,8 +83,10 @@ const Rituals = () => {
       
       // Load ritual types
       const typesRes = await fetch(`${API_URL}/rituals/types`);
-      const types = await typesRes.json();
-      setRitualTypes(types);
+      if (typesRes.ok) {
+        const types = await typesRes.json();
+        setRitualTypes(types);
+      }
 
       // Get user's family ID from localStorage
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -92,13 +94,19 @@ const Rituals = () => {
 
       // Load family rituals
       const ritualsRes = await fetch(`${API_URL}/rituals/${familyId}`);
-      const ritualsData = await ritualsRes.json();
-      setRituals(ritualsData);
+      if (ritualsRes.ok) {
+        const ritualsData = await ritualsRes.json();
+        setRituals(Array.isArray(ritualsData) ? ritualsData : []);
+      } else {
+        setRituals([]);
+      }
 
       // Load stats
       const statsRes = await fetch(`${API_URL}/rituals/stats?familyId=${familyId}`);
-      const statsData = await statsRes.json();
-      setStats(statsData);
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData);
+      }
 
       setFormData(prev => ({ ...prev, familyId }));
     } catch (error) {

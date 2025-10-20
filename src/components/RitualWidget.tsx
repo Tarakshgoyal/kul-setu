@@ -29,10 +29,21 @@ const RitualWidget = () => {
       const familyId = user.familyId || 'F01';
 
       const response = await fetch(`${API_URL}/rituals/upcoming?familyId=${familyId}&daysAhead=7`);
+      if (!response.ok) {
+        console.error('API error:', response.status);
+        setUpcomingRituals([]);
+        return;
+      }
+      
       const data = await response.json();
-      setUpcomingRituals(data.slice(0, 3)); // Show only 3
+      if (Array.isArray(data)) {
+        setUpcomingRituals(data.slice(0, 3)); // Show only 3
+      } else {
+        setUpcomingRituals([]);
+      }
     } catch (error) {
       console.error('Failed to load upcoming rituals:', error);
+      setUpcomingRituals([]);
     } finally {
       setLoading(false);
     }
