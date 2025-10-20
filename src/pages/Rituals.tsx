@@ -155,17 +155,10 @@ const Rituals = () => {
 
   const handleCreateRitual = async () => {
     try {
-      // Convert date format from YYYY-MM-DD to DD-MM-YYYY
-      const [year, month, day] = formData.ritualDate.split('-');
-      const formattedDate = `${day}-${month}-${year}`;
-
       const response = await fetch(`${API_URL}/rituals/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          ritualDate: formattedDate,
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
@@ -177,12 +170,13 @@ const Rituals = () => {
         resetForm();
         loadInitialData();
       } else {
-        throw new Error('Failed to create ritual');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create ritual');
       }
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to create ritual reminder',
+        description: error instanceof Error ? error.message : 'Failed to create ritual reminder',
         variant: 'destructive',
       });
     }
