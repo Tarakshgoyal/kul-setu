@@ -541,25 +541,23 @@ const Rituals = () => {
                           )}
                         </div>
                         <CardTitle className="text-xl">{ritual.ritualName}</CardTitle>
-                        <CardDescription className="mt-2">
-                          <div className="flex flex-col gap-1">
+                        <CardDescription className="mt-2 flex flex-col gap-1">
+                          <span className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            {formatDate(ritual.ritualDate)}
+                          </span>
+                          {ritual.location && (
                             <span className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              {formatDate(ritual.ritualDate)}
+                              <MapPin className="h-4 w-4" />
+                              {ritual.location}
                             </span>
-                            {ritual.location && (
-                              <span className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4" />
-                                {ritual.location}
-                              </span>
-                            )}
-                            {ritual.personName && (
-                              <span className="flex items-center gap-2">
-                                <User className="h-4 w-4" />
-                                {ritual.personName}
-                              </span>
-                            )}
-                          </div>
+                          )}
+                          {ritual.personName && (
+                            <span className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              {ritual.personName}
+                            </span>
+                          )}
                         </CardDescription>
                       </div>
                       <div className="flex gap-2">
@@ -654,19 +652,17 @@ const Rituals = () => {
                             </Badge>
                           </div>
                           <CardTitle className="text-xl">{ritual.ritualName}</CardTitle>
-                          <CardDescription className="mt-2">
-                            <div className="flex flex-col gap-1">
+                          <CardDescription className="mt-2 flex flex-col gap-1">
+                            <span className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              {formatDate(ritual.ritualDate)}
+                            </span>
+                            {ritual.location && (
                               <span className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4" />
-                                {formatDate(ritual.ritualDate)}
+                                <MapPin className="h-4 w-4" />
+                                {ritual.location}
                               </span>
-                              {ritual.location && (
-                                <span className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4" />
-                                  {ritual.location}
-                                </span>
-                              )}
-                            </div>
+                            )}
                           </CardDescription>
                         </div>
                       </div>
