@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, UserPlus, Search, Heart, TreePine, LogIn, LogOut } from 'lucide-react';
+import { Home, UserPlus, Search, Heart, TreePine, LogIn, LogOut, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getUser, logout } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ const Navigation = () => {
     { path: '/register', label: 'Register Family', icon: UserPlus },
     { path: '/search', label: 'Search Family', icon: Search },
     { path: '/tree', label: 'Family Tree', icon: TreePine },
+    { path: '/rituals', label: 'Rituals', icon: Calendar },
   ];
 
   const isActive = (path: string) => location.pathname === path;

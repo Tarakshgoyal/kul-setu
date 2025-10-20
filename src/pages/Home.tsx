@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { UserPlus, Search, Users, Heart, Star, TreePine } from 'lucide-react';
+import RitualWidget from '@/components/RitualWidget';
 // import heroImage from '@/assets/hero-spiritual.jpg';
 import heroimage from '@/assets/tree.jpg'
 
@@ -83,6 +84,11 @@ const Home = () => {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Preserve and explore the spiritual essence of your family lineage with beautiful, meaningful connections
             </p>
+          </div>
+
+          {/* Ritual Widget */}
+          <div className="mb-12 max-w-2xl mx-auto">
+            <RitualWidget />
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
