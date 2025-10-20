@@ -155,10 +155,22 @@ const Rituals = () => {
 
   const handleCreateRitual = async () => {
     try {
+      // Clean up the form data - remove empty strings and convert to null
+      const cleanedData = {
+        ...formData,
+        personId: formData.personId?.trim() || undefined, // Convert empty string to undefined
+        location: formData.location?.trim() || undefined,
+        panditType: formData.panditType?.trim() || undefined,
+        kulDevta: formData.kulDevta?.trim() || undefined,
+        description: formData.description?.trim() || undefined,
+        notes: formData.notes?.trim() || undefined,
+        recurrencePattern: formData.recurrencePattern?.trim() || undefined,
+      };
+
       const response = await fetch(`${API_URL}/rituals/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(cleanedData),
       });
 
       if (response.ok) {
