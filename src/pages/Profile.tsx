@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Heart, User, Calendar, Droplets, Eye, Users, Star, TreePine, Edit, MapPin, GraduationCap, Home } from 'lucide-react';
 import { type FamilyMember } from '@/lib/familyData';
+import PhotoGallery from '@/components/PhotoGallery';
+import LifeStory from '@/components/LifeStory';
 
 // API configuration
 const API_BASE_URL = 'https://kul-setu-backend.onrender.com';
@@ -48,6 +50,21 @@ const Profile = () => {
   const [member, setMember] = useState<FamilyMember | null>(null);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Get current user's ID from localStorage
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const kulSetuUser = localStorage.getItem('kulSetuUser');
+    if (kulSetuUser) {
+      try {
+        const userData = JSON.parse(kulSetuUser);
+        setCurrentUserId(userData.personId);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -494,6 +511,16 @@ const Profile = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Photo Gallery */}
+            <PhotoGallery personId={member.personId} currentUserId={currentUserId} />
+            
+            {/* Life Story */}
+            <LifeStory 
+              personId={member.personId} 
+              currentUserId={currentUserId}
+              personName={member.name}
+            />
           </div>
 
           {/* Sidebar */}

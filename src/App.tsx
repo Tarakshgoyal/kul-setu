@@ -13,6 +13,8 @@ import FamilyTree from "./pages/FamilyTree";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import Rituals from "./pages/Rituals";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="/tree" element={<FamilyTree />} />
             <Route path="/rituals" element={<Rituals />} />
             <Route path="/profile/:id" element={<Profile />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

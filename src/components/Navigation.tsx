@@ -3,6 +3,7 @@ import { Home, UserPlus, Search, Heart, TreePine, LogIn, LogOut, Calendar } from
 import { Button } from '@/components/ui/button';
 import { getUser, logout } from '@/lib/auth';
 import { toast } from 'sonner';
+import Notifications from './Notifications';
 
 const Navigation = () => {
   const location = useLocation();
@@ -49,6 +50,8 @@ const Navigation = () => {
                 <span className="hidden sm:inline">{label}</span>
               </Link>
             ))}
+            
+            {user && <Notifications />}
             
             {user ? (
               <Button
