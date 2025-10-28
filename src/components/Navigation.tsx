@@ -1,9 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, UserPlus, Search, Heart, TreePine, LogIn, LogOut, Calendar } from 'lucide-react';
+import { Home, UserPlus, Search, TreePine, LogIn, LogOut, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getUser, logout } from '@/lib/auth';
 import { toast } from 'sonner';
 import Notifications from './Notifications';
+import RamSetuIcon from './RamSetuIcon';
 
 const Navigation = () => {
   const location = useLocation();
@@ -31,7 +32,7 @@ const Navigation = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2 text-spiritual font-bold text-xl">
-            <Heart className="w-6 h-6 text-spiritual animate-glow" />
+            <RamSetuIcon className="w-6 h-6 text-spiritual animate-glow" size={24} />
             <span className="bg-gradient-spiritual bg-clip-text text-transparent">Kul Setu</span>
           </Link>
           

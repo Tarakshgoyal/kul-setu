@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { UserPlus, Search, Users, Heart, Star, TreePine } from 'lucide-react';
+import { UserPlus, Search, Users, Star, TreePine } from 'lucide-react';
 import RitualWidget from '@/components/RitualWidget';
+import RamSetuIcon from '@/components/RamSetuIcon';
 // import heroImage from '@/assets/hero-spiritual.jpg';
 import heroimage from '@/assets/tree.jpg'
 
@@ -43,7 +44,7 @@ const Home = () => {
                 </span>
               </h1>
               <p className="text-xl text-white/90 mb-8 leading-relaxed">
-                Connect with your family heritage. Explore the bonds that unite your lineage and celebrate your family’s history across generations.
+                Uniting Families Across Time Cherishing Ancestral Roots Remembering Every Relation Rituals Planned with Love & Devotion.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Button asChild size="lg" className="bg-sacred text-sacred-foreground hover:bg-sacred/90 shadow-sacred">
@@ -67,7 +68,7 @@ const Home = () => {
                 className="w-[450px] h-auto ml-20 rounded-2xl shadow-divine"
               />
               <div className="absolute -top-4 -right-4 bg-spiritual/20 rounded-full p-4 animate-glow">
-                <Heart className="w-8 h-8 text-white" />
+                <RamSetuIcon className="w-8 h-8 text-white" size={32} />
               </div>
             </div>
           </div>
