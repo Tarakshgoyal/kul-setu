@@ -43,7 +43,7 @@ const Home = () => {
                 </span>
               </h1>
               <p className="text-xl text-white/90 mb-8 leading-relaxed">
-                Connect with your spiritual family heritage. Discover the sacred bonds that unite your lineage through generations of wisdom, traits, and divine connections.
+                Connect with your family heritage. Explore the bonds that unite your lineage and celebrate your family’s history across generations.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Button asChild size="lg" className="bg-sacred text-sacred-foreground hover:bg-sacred/90 shadow-sacred">
@@ -79,7 +79,7 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-foreground mb-4">
-              Discover Your Sacred <span className="bg-gradient-spiritual bg-clip-text text-transparent">Family Tree</span>
+              Discover Your <span className="bg-gradient-spiritual bg-clip-text text-transparent">Family Tree</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Preserve and explore the spiritual essence of your family lineage with beautiful, meaningful connections
@@ -113,7 +113,7 @@ const Home = () => {
         <div className="relative container mx-auto px-4 text-center">
           <Star className="w-12 h-12 text-white/80 mx-auto mb-6 animate-glow" />
           <blockquote className="text-2xl lg:text-3xl font-medium text-white mb-6 italic max-w-4xl mx-auto leading-relaxed">
-            "Family is not just about blood relations, but about the spiritual bonds that connect souls across generations."
+            "Family is more than blood it’s about the stories, memories, and connections that shape us across generations."
           </blockquote>
           <div className="flex items-center justify-center space-x-2 text-white/80">
             <TreePine className="w-5 h-5" />
