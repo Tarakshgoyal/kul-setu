@@ -684,31 +684,19 @@ const ComprehensiveRegister = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="birthmark" className="text-foreground font-medium">Birthmark</Label>
-                    <Select
+                    <Input
+                      id="birthmark"
                       value={currentFormData.birthmark || ''}
-                      onValueChange={(value) => {
+                      onChange={(e) => {
                         if (memberType === 'alive') {
-                          handleAliveInputChange('birthmark', value);
+                          handleAliveInputChange('birthmark', e.target.value);
                         } else {
-                          handleDeadInputChange('birthmark', value);
+                          handleDeadInputChange('birthmark', e.target.value);
                         }
                       }}
-                    >
-                      <SelectTrigger className="border-border/50 focus:border-spiritual">
-                        <SelectValue placeholder="Select birthmark location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="None">None</SelectItem>
-                        <SelectItem value="Hand">Hand</SelectItem>
-                        <SelectItem value="Shoulder">Shoulder</SelectItem>
-                        <SelectItem value="Neck">Neck</SelectItem>
-                        <SelectItem value="Chest">Chest</SelectItem>
-                        <SelectItem value="Back">Back</SelectItem>
-                        <SelectItem value="Face">Face</SelectItem>
-                        <SelectItem value="Arm">Arm</SelectItem>
-                        <SelectItem value="Leg">Leg</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      placeholder="Describe birthmark location/type"
+                      className="border-border/50 focus:border-spiritual"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -758,28 +746,19 @@ const ComprehensiveRegister = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="beardStyleTrend" className="text-foreground font-medium">Beard Style</Label>
-                  <Select
+                  <Input
+                    id="beardStyleTrend"
                     value={currentFormData.beardStyleTrend || ''}
-                    onValueChange={(value) => {
+                    onChange={(e) => {
                       if (memberType === 'alive') {
-                        handleAliveInputChange('beardStyleTrend', value);
+                        handleAliveInputChange('beardStyleTrend', e.target.value);
                       } else {
-                        handleDeadInputChange('beardStyleTrend', value);
+                        handleDeadInputChange('beardStyleTrend', e.target.value);
                       }
                     }}
-                  >
-                    <SelectTrigger className="border-border/50 focus:border-spiritual">
-                      <SelectValue placeholder="Select beard style" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="N/A">N/A</SelectItem>
-                      <SelectItem value="Clean Shaven">Clean Shaven</SelectItem>
-                      <SelectItem value="Full Beard">Full Beard</SelectItem>
-                      <SelectItem value="Goatee">Goatee</SelectItem>
-                      <SelectItem value="Mustache">Mustache</SelectItem>
-                      <SelectItem value="Stubble">Stubble</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    placeholder="Describe beard style (e.g., Full Beard, Clean Shaven)"
+                    className="border-border/50 focus:border-spiritual"
+                  />
                 </div>
               </div>
 

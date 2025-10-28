@@ -166,8 +166,16 @@ class ApiClient {
   }
 
   async searchMembers(params: SearchParams): Promise<SearchResponse> {
-    const query = new URLSearchParams(params as Record<string, string>).toString();
-    return this.request<SearchResponse>(`/search?${query}`);
+    const response = await this.request<FamilyMember[]>('/search', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    
+    // Backend returns array directly, wrap it in SearchResponse format
+    return {
+      results: Array.isArray(response) ? response : [],
+      count: Array.isArray(response) ? response.length : 0
+    };
   }
 
   // Registration Schema and Validation

@@ -14,11 +14,9 @@ import {
   genders, 
   ethnicities, 
   yesNoOptions, 
-  educationLevels, 
   socioeconomicStatuses, 
   natureOptions, 
   beardStyles, 
-  recipeCuisines, 
   familyTraditions,
   type FamilyMember 
 } from '@/lib/familyData';
@@ -351,16 +349,13 @@ const Register = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="birthmark" className="text-foreground font-medium">Birthmark</Label>
-                    <Select value={formData.birthmark || ''} onValueChange={(value) => handleInputChange('birthmark', value)}>
-                      <SelectTrigger className="border-border/50 focus:border-spiritual">
-                        <SelectValue placeholder="Has birthmark?" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {yesNoOptions.map(option => (
-                          <SelectItem key={option} value={option}>{option}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="birthmark"
+                      value={formData.birthmark || ''}
+                      onChange={(e) => handleInputChange('birthmark', e.target.value)}
+                      placeholder="Describe birthmark location/type"
+                      className="border-border/50 focus:border-spiritual"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -490,16 +485,13 @@ const Register = () => {
                   {formData.gender === 'M' && (
                     <div className="space-y-2">
                       <Label htmlFor="beardStyleTrend" className="text-foreground font-medium">Beard Style</Label>
-                      <Select value={formData.beardStyleTrend || ''} onValueChange={(value) => handleInputChange('beardStyleTrend', value)}>
-                        <SelectTrigger className="border-border/50 focus:border-spiritual">
-                          <SelectValue placeholder="Select beard style" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {beardStyles.map(style => (
-                            <SelectItem key={style} value={style}>{style}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        id="beardStyleTrend"
+                        value={formData.beardStyleTrend || ''}
+                        onChange={(e) => handleInputChange('beardStyleTrend', e.target.value)}
+                        placeholder="Describe beard style (e.g., Full Beard, Clean Shaven)"
+                        className="border-border/50 focus:border-spiritual"
+                      />
                     </div>
                   )}
                 </div>
@@ -511,16 +503,13 @@ const Register = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="recipesCuisine" className="text-foreground font-medium">Recipes/Cuisine</Label>
-                    <Select value={formData.recipesCuisine || ''} onValueChange={(value) => handleInputChange('recipesCuisine', value)}>
-                      <SelectTrigger className="border-border/50 focus:border-spiritual">
-                        <SelectValue placeholder="Select cuisine type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {recipeCuisines.map(cuisine => (
-                          <SelectItem key={cuisine} value={cuisine}>{cuisine}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="recipesCuisine"
+                      value={formData.recipesCuisine || ''}
+                      onChange={(e) => handleInputChange('recipesCuisine', e.target.value)}
+                      placeholder="Enter cuisine type (e.g., Italian, Indian, Chinese)"
+                      className="border-border/50 focus:border-spiritual"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -567,16 +556,13 @@ const Register = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="educationLevel" className="text-foreground font-medium">Education Level</Label>
-                    <Select value={formData.educationLevel || ''} onValueChange={(value) => handleInputChange('educationLevel', value)}>
-                      <SelectTrigger className="border-border/50 focus:border-spiritual">
-                        <SelectValue placeholder="Select education level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {educationLevels.map(level => (
-                          <SelectItem key={level} value={level}>{level}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="educationLevel"
+                      value={formData.educationLevel || ''}
+                      onChange={(e) => handleInputChange('educationLevel', e.target.value)}
+                      placeholder="Enter education level (e.g., High School, Bachelor's, Master's)"
+                      className="border-border/50 focus:border-spiritual"
+                    />
                   </div>
 
                   <div className="space-y-2">

@@ -97,7 +97,7 @@ const FamilyTree = () => {
     }
   }, [selectedFamily, members, showRootView, userFamilyId]);
 
-  const buildImmediateFamily = (familyMembers: FamilyMember[]): TreeNode[] => {
+    const buildImmediateFamily = (familyMembers: FamilyMember[]): TreeNode[] => {
     // Get the logged-in user
     const loggedInUser = getUser();
     if (!loggedInUser?.personId) return [];
@@ -120,15 +120,15 @@ const FamilyTree = () => {
     const childNodes = children.map((child, idx) => ({
       member: child,
       children: [], // Don't show grandchildren in immediate family view
-      x: idx * 320,
-      y: 280,
+      x: idx * 380,
+      y: 300,
       spouse: undefined
     }));
 
     const userNode: TreeNode = {
       member: userMember,
       children: childNodes,
-      x: Math.max(0, (children.length - 1) * 160), // Center the user above children
+      x: Math.max(0, (children.length - 1) * 190), // Center the user above children
       y: 0,
       spouse: spouse
     };
@@ -143,7 +143,39 @@ const FamilyTree = () => {
       m.generation === minGeneration || (!m.fatherId && !m.motherId)
     );
 
-    const buildNode = (member: FamilyMember, level: number, offset: number): TreeNode => {
+    // Global visited set to prevent duplicates across entire tree
+    const globalVisited = new Set<string>();
+
+    const calculateSubtreeWidth = (member: FamilyMember, visited: Set<string>): number => {
+      if (visited.has(member.personId)) return 0;
+      visited.add(member.personId);
+      
+      const children = familyMembers.filter(m => 
+        m.fatherId === member.personId || m.motherId === member.personId
+      );
+      
+      const uniqueChildren = children.filter((child, index, self) => 
+        index === self.findIndex(c => c.personId === child.personId)
+      );
+      
+      if (uniqueChildren.length === 0) return 1;
+      
+      const childWidths = uniqueChildren.reduce((sum, child) => sum + calculateSubtreeWidth(child, visited), 0);
+      return Math.max(1, childWidths);
+    };
+
+    const buildNode = (member: FamilyMember, level: number, startX: number, visited: Set<string>): TreeNode => {
+      if (visited.has(member.personId)) {
+        return {
+          member,
+          children: [],
+          x: startX,
+          y: level * 300,
+          spouse: undefined
+        };
+      }
+      visited.add(member.personId);
+      
       const children = familyMembers.filter(m => 
         m.fatherId === member.personId || m.motherId === member.personId
       );
@@ -152,30 +184,50 @@ const FamilyTree = () => {
         index === self.findIndex(c => c.personId === child.personId)
       );
 
-      const childNodes = uniqueChildren.map((child, idx) => 
-        buildNode(child, level + 1, offset + idx)
-      );
+      let currentX = startX;
+      const childNodes: TreeNode[] = [];
+      
+      for (const child of uniqueChildren) {
+        const childVisited = new Set(visited);
+        const childWidth = calculateSubtreeWidth(child, childVisited);
+        const childNode = buildNode(child, level + 1, currentX, visited);
+        childNodes.push(childNode);
+        currentX += childWidth * 450; // Increased spacing to prevent overlap
+      }
 
       // Find spouse by looking for the other parent of this member's children
       const spouse = familyMembers.find(m => {
         if (m.personId === member.personId) return false;
-        // Check if this person is the other parent of any of member's children
         return children.some(child => 
           (child.fatherId === member.personId && child.motherId === m.personId) ||
           (child.motherId === member.personId && child.fatherId === m.personId)
         );
       });
 
+      // Center parent above children
+      const nodeX = childNodes.length > 0 
+        ? (childNodes[0].x + childNodes[childNodes.length - 1].x) / 2
+        : startX;
+
       return {
         member,
         children: childNodes,
-        x: offset * 320, // Increased spacing
-        y: level * 280,  // Increased vertical spacing
+        x: nodeX,
+        y: level * 300,
         spouse
       };
     };
 
-    return roots.map((root, idx) => buildNode(root, 0, idx * 3));
+    let currentRootX = 0;
+    return roots.map((root) => {
+      if (globalVisited.has(root.personId)) return null;
+      
+      const rootVisited = new Set(globalVisited);
+      const rootWidth = calculateSubtreeWidth(root, new Set(globalVisited));
+      const rootNode = buildNode(root, 0, currentRootX, globalVisited);
+      currentRootX += rootWidth * 450; // Increased spacing between root families
+      return rootNode;
+    }).filter((node): node is TreeNode => node !== null);
   };
 
   const getInitials = (firstName: string) => {
@@ -203,6 +255,9 @@ const FamilyTree = () => {
   };
 
   const renderNode = (node: TreeNode): JSX.Element => {
+    const coupleWidth = node.spouse ? 600 : 280; // Width for couple or single person
+    const centerOffset = node.spouse ? 300 : 140; // Center point for connecting lines
+    
     return (
       <div key={node.member.personId}>
         {/* Connection lines to children */}
@@ -214,11 +269,11 @@ const FamilyTree = () => {
             height: '100%',
             zIndex: 0
           }}>
-            {/* Vertical line down from parent */}
+            {/* Vertical line down from couple center */}
             <line
-              x1={node.x + 140}
+              x1={node.x + centerOffset}
               y1={node.y + 200}
-              x2={node.x + 140}
+              x2={node.x + centerOffset}
               y2={node.y + 250}
               stroke="hsl(var(--spiritual))"
               strokeWidth="2"
@@ -254,15 +309,16 @@ const FamilyTree = () => {
           </svg>
         )}
 
-        {/* Person card */}
+        {/* Couple container - Person and Spouse side by side */}
         <div
-          className="absolute transition-transform hover:scale-105"
+          className="absolute flex gap-10 items-start"
           style={{
             left: node.x,
             top: node.y,
             zIndex: 1
           }}
         >
+          {/* Person card */}
           <Link to={`/profile/${node.member.personId}`}>
             <Card className="w-[280px] border-spiritual/20 hover:border-spiritual/50 transition-all duration-300 hover:shadow-spiritual cursor-pointer group bg-card/95 backdrop-blur">
               <CardContent className="p-6">
@@ -300,19 +356,72 @@ const FamilyTree = () => {
                     )}
                   </div>
 
-                  {/* Relationship indicators */}
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    {node.spouse && (
-                      <div className="text-spiritual">💑 Married</div>
-                    )}
-                    {node.children.length > 0 && (
-                      <div className="text-spiritual">👥 {node.children.length} child{node.children.length !== 1 ? 'ren' : ''}</div>
-                    )}
-                  </div>
+                  {node.children.length > 0 && (
+                    <div className="text-xs text-spiritual">
+                      👥 {node.children.length} child{node.children.length !== 1 ? 'ren' : ''}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </Link>
+
+          {/* Heart icon between couple */}
+          {node.spouse && (
+            <div className="flex items-center justify-center pt-20">
+              <Heart className="w-6 h-6 text-spiritual fill-spiritual animate-pulse" />
+            </div>
+          )}
+
+          {/* Spouse card */}
+          {node.spouse && (
+            <Link to={`/profile/${node.spouse.personId}`}>
+              <Card className="w-[280px] border-spiritual/20 hover:border-spiritual/50 transition-all duration-300 hover:shadow-spiritual cursor-pointer group bg-card/95 backdrop-blur">
+                <CardContent className="p-6">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <Avatar className="w-20 h-20 border-2 border-spiritual/30 group-hover:border-spiritual transition-colors">
+                      <AvatarFallback className="bg-gradient-spiritual text-white text-xl font-bold">
+                        {getInitials(node.spouse.firstName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div>
+                      <h3 className="font-bold text-lg text-foreground">
+                        {node.spouse.firstName}
+                      </h3>
+                      <p className="text-xs text-spiritual font-medium mt-1">
+                        Gen: {node.spouse.generation}
+                      </p>
+                      {node.spouse.gender && (
+                        <p className="text-xs text-muted-foreground">
+                          {node.spouse.gender === 'M' ? 'Male' : 'Female'}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap justify-center">
+                      {node.spouse.bloodGroup && (
+                        <span className="px-2 py-1 bg-spiritual/10 text-spiritual rounded-full text-xs">
+                          {node.spouse.bloodGroup}
+                        </span>
+                      )}
+                      {node.spouse.eyeColor && (
+                        <span className="px-2 py-1 bg-spiritual/10 text-spiritual rounded-full text-xs">
+                          {node.spouse.eyeColor}
+                        </span>
+                      )}
+                    </div>
+
+                    {node.children.length > 0 && (
+                      <div className="text-xs text-spiritual">
+                        👥 {node.children.length} child{node.children.length !== 1 ? 'ren' : ''}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
         </div>
 
         {/* Render children */}

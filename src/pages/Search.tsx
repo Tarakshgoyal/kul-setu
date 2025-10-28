@@ -16,11 +16,9 @@ import {
   genders, 
   ethnicities, 
   yesNoOptions, 
-  educationLevels, 
   socioeconomicStatuses, 
   natureOptions, 
   beardStyles, 
-  recipeCuisines, 
   familyTraditions 
 } from '@/lib/familyData';
 
@@ -29,13 +27,39 @@ const Search = () => {
   const [results, setResults] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [userFamilyLineId, setUserFamilyLineId] = useState<string>('');
 
-  // Load all members initially
+  // Get logged-in user's family line ID
+  useEffect(() => {
+    const getUserFamilyLineId = () => {
+      const userData = localStorage.getItem('kulSetuUser');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user.familyLineId) {
+            setUserFamilyLineId(user.familyLineId);
+            // Set family line ID in search query
+            setSearchQuery(prev => ({
+              ...prev,
+              familyLineId: user.familyLineId
+            }));
+          }
+        } catch (err) {
+          console.error("Error parsing user data:", err);
+        }
+      }
+    };
+    getUserFamilyLineId();
+  }, []);
+
+  // Load all members initially (filtered by family line)
   useEffect(() => {
     const loadAllMembers = async () => {
+      if (!userFamilyLineId) return; // Wait for family line ID
+      
       try {
-        console.log("Loading all members...");
-        const response = await apiClient.searchMembers({});
+        console.log("Loading all members for family:", userFamilyLineId);
+        const response = await apiClient.searchMembers({ familyLineId: userFamilyLineId });
         console.log("Received data:", response);
         setResults(response.results || []);
         setTotalCount(response.count || 0);
@@ -46,14 +70,19 @@ const Search = () => {
       }
     };
     loadAllMembers();
-  }, []);
+  }, [userFamilyLineId]);
 
   // Search button handler → call backend
   const handleSearch = async () => {
     setLoading(true);
-    console.log("Searching with query:", searchQuery);
+    // Ensure family line ID is always included in search
+    const searchWithFamilyId = {
+      ...searchQuery,
+      familyLineId: userFamilyLineId
+    };
+    console.log("Searching with query:", searchWithFamilyId);
     try {
-      const response = await apiClient.searchMembers(searchQuery);
+      const response = await apiClient.searchMembers(searchWithFamilyId);
       console.log("Search results:", response);
       setResults(response.results || []);
       setTotalCount(response.count || 0);
@@ -65,12 +94,12 @@ const Search = () => {
     setLoading(false);
   };
 
-  // Reset filters → clear state & fetch all members
+  // Reset filters → clear state & fetch all members (keep family line ID)
   const handleReset = async () => {
-    setSearchQuery({});
+    setSearchQuery({ familyLineId: userFamilyLineId });
     setLoading(true);
     try {
-      const response = await apiClient.searchMembers({});
+      const response = await apiClient.searchMembers({ familyLineId: userFamilyLineId });
       setResults(response.results || []);
       setTotalCount(response.count || 0);
     } catch (err) {
@@ -114,7 +143,7 @@ const Search = () => {
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-foreground border-b pb-2">Basic Information</h3>
-                <div className="grid md:grid-cols-4 gap-4">
+                <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
                     <Input
@@ -122,26 +151,6 @@ const Search = () => {
                       value={searchQuery.firstName || ''}
                       onChange={(e) => handleInputChange('firstName', e.target.value)}
                       placeholder="Search by first name"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="personId">Person ID</Label>
-                    <Input
-                      id="personId"
-                      value={searchQuery.personId || ''}
-                      onChange={(e) => handleInputChange('personId', e.target.value)}
-                      placeholder="Search by person ID"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="familyLineId">Family Line ID</Label>
-                    <Input
-                      id="familyLineId"
-                      value={searchQuery.familyLineId || ''}
-                      onChange={(e) => handleInputChange('familyLineId', e.target.value)}
-                      placeholder="Search by family line"
                     />
                   </div>
 
@@ -164,12 +173,11 @@ const Search = () => {
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="gender">Gender</Label>
-                    <Select value={searchQuery.gender || 'all'} onValueChange={(value) => handleInputChange('gender', value)}>
+                    <Select value={searchQuery.gender || ''} onValueChange={(value) => handleInputChange('gender', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
                         {genders.map(gender => (
                           <SelectItem key={gender} value={gender}>{gender === 'M' ? 'Male' : 'Female'}</SelectItem>
                         ))}
@@ -179,12 +187,11 @@ const Search = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="ethnicity">Ethnicity</Label>
-                    <Select value={searchQuery.ethnicity || 'all'} onValueChange={(value) => handleInputChange('ethnicity', value)}>
+                    <Select value={searchQuery.ethnicity || ''} onValueChange={(value) => handleInputChange('ethnicity', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select ethnicity" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
                         {ethnicities.map(ethnicity => (
                           <SelectItem key={ethnicity} value={ethnicity}>{ethnicity}</SelectItem>
                         ))}
@@ -194,12 +201,11 @@ const Search = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="bloodGroup">Blood Group</Label>
-                    <Select value={searchQuery.bloodGroup || 'all'} onValueChange={(value) => handleInputChange('bloodGroup', value)}>
+                    <Select value={searchQuery.bloodGroup || ''} onValueChange={(value) => handleInputChange('bloodGroup', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select blood group" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
                         {bloodGroups.map(group => (
                           <SelectItem key={group} value={group}>{group}</SelectItem>
                         ))}
@@ -215,12 +221,11 @@ const Search = () => {
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="eyeColor">Eye Color</Label>
-                    <Select value={searchQuery.eyeColor || 'all'} onValueChange={(value) => handleInputChange('eyeColor', value)}>
+                    <Select value={searchQuery.eyeColor || ''} onValueChange={(value) => handleInputChange('eyeColor', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select eye color" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
                         {eyeColors.map(color => (
                           <SelectItem key={color} value={color}>{color}</SelectItem>
                         ))}
@@ -230,12 +235,11 @@ const Search = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="hairColor">Hair Color</Label>
-                    <Select value={searchQuery.hairColor || 'all'} onValueChange={(value) => handleInputChange('hairColor', value)}>
+                    <Select value={searchQuery.hairColor || ''} onValueChange={(value) => handleInputChange('hairColor', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select hair color" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
                         {hairColors.map(color => (
                           <SelectItem key={color} value={color}>{color}</SelectItem>
                         ))}
@@ -245,12 +249,11 @@ const Search = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="skinTone">Skin Tone</Label>
-                    <Select value={searchQuery.skinTone || 'all'} onValueChange={(value) => handleInputChange('skinTone', value)}>
+                    <Select value={searchQuery.skinTone || ''} onValueChange={(value) => handleInputChange('skinTone', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select skin tone" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
                         {skinTones.map(tone => (
                           <SelectItem key={tone} value={tone}>{tone}</SelectItem>
                         ))}
@@ -260,33 +263,223 @@ const Search = () => {
                 </div>
               </div>
 
-              {/* Socioeconomic & Personal */}
+              {/* Additional Physical Features */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Socioeconomic & Personal</h3>
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Additional Features</h3>
                 <div className="grid md:grid-cols-4 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="educationLevel">Education Level</Label>
-                    <Select value={searchQuery.educationLevel || 'all'} onValueChange={(value) => handleInputChange('educationLevel', value)}>
+                    <Label htmlFor="birthmark">Birthmark</Label>
+                    <Input
+                      id="birthmark"
+                      value={searchQuery.birthmark || ''}
+                      onChange={(e) => handleInputChange('birthmark', e.target.value)}
+                      placeholder="Search by birthmark"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="freckles">Freckles</Label>
+                    <Select value={searchQuery.freckles || ''} onValueChange={(value) => handleInputChange('freckles', value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select education" />
+                        <SelectValue placeholder="Select freckles" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        {educationLevels.map(level => (
-                          <SelectItem key={level} value={level}>{level}</SelectItem>
+                        {yesNoOptions.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="baldness">Baldness</Label>
+                    <Select value={searchQuery.baldness || ''} onValueChange={(value) => handleInputChange('baldness', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select baldness" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yesNoOptions.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="beardStyle">Beard Style</Label>
+                    <Input
+                      id="beardStyle"
+                      value={searchQuery.beardStyleTrend || ''}
+                      onChange={(e) => handleInputChange('beardStyleTrend', e.target.value)}
+                      placeholder="Search by beard style"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Medical Conditions */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Medical Conditions</h3>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="diabetes">Diabetes</Label>
+                    <Select value={searchQuery.conditionDiabetes || ''} onValueChange={(value) => handleInputChange('conditionDiabetes', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yesNoOptions.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="heartIssue">Heart Issue</Label>
+                    <Select value={searchQuery.conditionHeartIssue || ''} onValueChange={(value) => handleInputChange('conditionHeartIssue', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yesNoOptions.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="asthma">Asthma</Label>
+                    <Select value={searchQuery.conditionAsthma || ''} onValueChange={(value) => handleInputChange('conditionAsthma', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yesNoOptions.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="colorBlindness">Color Blindness</Label>
+                    <Select value={searchQuery.conditionColorBlindness || ''} onValueChange={(value) => handleInputChange('conditionColorBlindness', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yesNoOptions.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="otherDisease">Other Disease</Label>
+                    <Input
+                      id="otherDisease"
+                      value={searchQuery.otherDisease || ''}
+                      onChange={(e) => handleInputChange('otherDisease', e.target.value)}
+                      placeholder="Search by disease"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="disability">Disability</Label>
+                    <Input
+                      id="disability"
+                      value={searchQuery.disability || ''}
+                      onChange={(e) => handleInputChange('disability', e.target.value)}
+                      placeholder="Search by disability"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Traits */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Personal Traits</h3>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="leftHanded">Left Handed</Label>
+                    <Select value={searchQuery.leftHanded || ''} onValueChange={(value) => handleInputChange('leftHanded', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yesNoOptions.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="isTwin">Is Twin</Label>
+                    <Select value={searchQuery.isTwin || ''} onValueChange={(value) => handleInputChange('isTwin', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yesNoOptions.map(option => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="passion">Passion</Label>
+                    <Input
+                      id="passion"
+                      value={searchQuery.passion || ''}
+                      onChange={(e) => handleInputChange('passion', e.target.value)}
+                      placeholder="Search by passion"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="natureOfPerson">Nature</Label>
+                    <Select value={searchQuery.natureOfPerson || ''} onValueChange={(value) => handleInputChange('natureOfPerson', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select nature" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {natureOptions.map(nature => (
+                          <SelectItem key={nature} value={nature}>{nature}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Socioeconomic & Cultural */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Socioeconomic & Cultural</h3>
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="educationLevel">Education Level</Label>
+                    <Input
+                      id="educationLevel"
+                      value={searchQuery.educationLevel || ''}
+                      onChange={(e) => handleInputChange('educationLevel', e.target.value)}
+                      placeholder="Search by education level"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="socioeconomicStatus">Socioeconomic Status</Label>
-                    <Select value={searchQuery.socioeconomicStatus || 'all'} onValueChange={(value) => handleInputChange('socioeconomicStatus', value)}>
+                    <Select value={searchQuery.socioeconomicStatus || ''} onValueChange={(value) => handleInputChange('socioeconomicStatus', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
                         {socioeconomicStatuses.map(status => (
                           <SelectItem key={status} value={status}>{status}</SelectItem>
                         ))}
@@ -295,20 +488,35 @@ const Search = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="natureOfPerson">Nature</Label>
-                    <Select value={searchQuery.natureOfPerson || 'all'} onValueChange={(value) => handleInputChange('natureOfPerson', value)}>
+                    <Label htmlFor="recipesCuisine">Recipe Cuisine</Label>
+                    <Input
+                      id="recipesCuisine"
+                      value={searchQuery.recipesCuisine || ''}
+                      onChange={(e) => handleInputChange('recipesCuisine', e.target.value)}
+                      placeholder="Search by cuisine type"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="familyTraditions">Family Traditions</Label>
+                    <Select value={searchQuery.familyTraditions || ''} onValueChange={(value) => handleInputChange('familyTraditions', value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select nature" />
+                        <SelectValue placeholder="Select tradition" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        {natureOptions.map(nature => (
-                          <SelectItem key={nature} value={nature}>{nature}</SelectItem>
+                        {familyTraditions.map(tradition => (
+                          <SelectItem key={tradition} value={tradition}>{tradition}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+              </div>
 
+              {/* Location & Migration */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Location & Migration</h3>
+                <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="nativeLocation">Native Location</Label>
                     <Input
@@ -316,6 +524,52 @@ const Search = () => {
                       value={searchQuery.nativeLocation || ''}
                       onChange={(e) => handleInputChange('nativeLocation', e.target.value)}
                       placeholder="Search by location"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="migrationPath">Migration Path</Label>
+                    <Input
+                      id="migrationPath"
+                      value={searchQuery.migrationPath || ''}
+                      onChange={(e) => handleInputChange('migrationPath', e.target.value)}
+                      placeholder="Search by migration path"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dates & Lifespan */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground border-b pb-2">Dates & Lifespan</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dob">Date of Birth</Label>
+                    <Input
+                      id="dob"
+                      type="date"
+                      value={searchQuery.dob || ''}
+                      onChange={(e) => handleInputChange('dob', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="dod">Date of Death</Label>
+                    <Input
+                      id="dod"
+                      type="date"
+                      value={searchQuery.dod || ''}
+                      onChange={(e) => handleInputChange('dod', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="causeOfDeath">Cause of Death</Label>
+                    <Input
+                      id="causeOfDeath"
+                      value={searchQuery.causeOfDeath || ''}
+                      onChange={(e) => handleInputChange('causeOfDeath', e.target.value)}
+                      placeholder="Search by cause"
                     />
                   </div>
                 </div>

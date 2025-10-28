@@ -1,872 +1,1074 @@
-import { useState, useEffect } from 'react';
-import { Calendar, Plus, Filter, TrendingUp, Bell, Edit, Trash2, X, MapPin, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState, useEffect } from "react";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Bell, Calendar as CalendarIcon, Plus, Trash2, Sparkles, Flame, Flower2, Users, Moon, Sun, Star, Home } from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { getUser } from "@/lib/auth";
 
-const API_URL = 'https://kul-setu-backend.onrender.com';
+const API_URL = "https://kul-setu-backend.onrender.com";
 
 interface Ritual {
-  reminderId: string;
-  familyId: string;
-  personId?: string;
-  personName?: string;
-  ritualType: string;
-  ritualName: string;
-  ritualDate: string;
-  recurring: boolean;
-  recurrencePattern?: string;
-  location?: string;
+  id: string;
+  title: string;
+  category: string;
+  date: Date;
+  description: string;
   panditType?: string;
   kulDevta?: string;
-  description?: string;
-  notes?: string;
-  reminderDaysBefore: number;
-  isCompleted: boolean;
+  location?: string;
+  recurring?: boolean;
+  recurrencePattern?: string;
 }
 
-interface RitualTypes {
-  ritual_types: Array<{ value: string; label: string }>;
-  recurrence_patterns: string[];
-  pandit_types: string[];
-}
+const ritualCategories = [
+  // House & Property
+  { value: "grahparvesh", label: "Grahparvesh (Griha Pravesh)", icon: Home, color: "text-primary" },
+  { value: "vehicle_pooja", label: "Vehicle Purchase Pooja", icon: Flame, color: "text-accent" },
+  
+  // Birth & Child Rituals
+  { value: "birth", label: "Birth Rituals", icon: Sun, color: "text-secondary" },
+  { value: "child_ritual", label: "Child Rituals (Chati, Mundan, etc.)", icon: Sun, color: "text-sacred" },
+  
+  // Death & Remembrance
+  { value: "death", label: "Death Rituals", icon: Moon, color: "text-muted-foreground" },
+  { value: "death_ritual", label: "Death Ceremony (13th Day)", icon: Moon, color: "text-muted-foreground" },
+  { value: "shraad", label: "Shraad", icon: Flame, color: "text-spiritual" },
+  { value: "barsi", label: "Barsi (Death Anniversary)", icon: Moon, color: "text-muted-foreground" },
+  
+  // Marriage
+  { value: "marriage", label: "Marriage Rituals (Roka, Sagai, etc.)", icon: Flower2, color: "text-accent" },
+  
+  // Festivals
+  { value: "festival", label: "Festival Rituals", icon: Sparkles, color: "text-primary" },
+  { value: "navratri", label: "Navratri", icon: Star, color: "text-divine" },
+  
+  // Pooja & Worship
+  { value: "pooja", label: "General Pooja/Worship", icon: Flame, color: "text-sacred" },
+  { value: "worship", label: "Worship Ceremony", icon: Flame, color: "text-sacred" },
+  { value: "kul_devta", label: "Kul Devta/Devi Pooja", icon: Star, color: "text-divine" },
+  { value: "vrat_pooja", label: "Vrat Pooja (Karva Chauth, etc.)", icon: Flame, color: "text-spiritual" },
+  { value: "satya_narayan", label: "Satya Narayan Pooja", icon: Star, color: "text-divine" },
+  
+  // Special Rituals
+  { value: "panchang", label: "Panchang Related", icon: Calendar, color: "text-foreground" },
+  { value: "kundli_pooja", label: "Kundli Pooja", icon: Star, color: "text-divine" },
+  { value: "kul_pooja", label: "Kul Pooja", icon: Users, color: "text-primary" },
+];
+
+const panditTypes = [
+  "Brahmin Pandit",
+  "Purohit",
+  "Jyotish",
+  "Karmakandi",
+  "Local Pandit",
+];
+
+const uttarakhandFestivals = [
+  { name: "Phool Dei", date: "March-April" },
+  { name: "Bikhauti Mela", date: "April" },
+  { name: "Nanda Devi Raj Jat", date: "August-September" },
+  { name: "Harela", date: "July" },
+  { name: "Ghuian Ekadashi", date: "August" },
+  { name: "Kandali Festival", date: "Every 12 years" },
+  { name: "Uttarayani Mela", date: "January" },
+];
 
 const Rituals = () => {
+  const [selectedDate, setSelectedDate] = useState<Date>();
   const [rituals, setRituals] = useState<Ritual[]>([]);
-  const [filteredRituals, setFilteredRituals] = useState<Ritual[]>([]);
-  const [ritualTypes, setRitualTypes] = useState<RitualTypes | null>(null);
-  const [stats, setStats] = useState<any>(null);
+  const [festivals, setFestivals] = useState<any[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedRitual, setSelectedRitual] = useState<Ritual | null>(null);
-  const [filterType, setFilterType] = useState<string>('all');
-  const [showCompleted, setShowCompleted] = useState(false);
-  const { toast } = useToast();
-
-  // Form state for create/edit
-  const [formData, setFormData] = useState({
-    ritualType: '',
-    ritualName: '',
-    ritualDate: '',
-    familyId: '',
-    personId: '',
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [newRitual, setNewRitual] = useState({
+    title: "",
+    category: "",
+    description: "",
+    panditType: "",
+    kulDevta: "",
+    location: "",
     recurring: false,
-    recurrencePattern: '',
-    location: '',
-    panditType: '',
-    kulDevta: '',
-    description: '',
-    notes: '',
-    reminderDaysBefore: 7,
+    recurrencePattern: "one_time",
   });
 
   useEffect(() => {
-    loadInitialData();
+    const user = getUser();
+    console.log("Current user:", user);
+    console.log("User familyId:", user?.familyId);
+    
+    // Fetch festivals for all users
+    fetchFestivals();
+    
+    if (user?.familyId) {
+      setFamilyId(user.familyId);
+      fetchRituals(user.familyId);
+    } else {
+      setLoading(false);
+      console.warn("No familyId found for user");
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to view rituals",
+        variant: "destructive",
+      });
+    }
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [rituals, filterType, showCompleted]);
+  const fetchFestivals = async () => {
+    try {
+      const response = await fetch(`${API_URL}/festivals`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Festivals loaded:", data);
+        setFestivals(data);
+      }
+    } catch (error) {
+      console.error("Error fetching festivals:", error);
+    }
+  };
 
-  const loadInitialData = async () => {
+  const fetchRituals = async (familyId: string) => {
     try {
       setLoading(true);
+      console.log("Fetching rituals for familyId:", familyId);
+      const response = await fetch(`${API_URL}/rituals/${familyId}`);
+      console.log("Fetch response status:", response.status);
       
-      // Load ritual types
-      const typesRes = await fetch(`${API_URL}/rituals/types`);
-      if (typesRes.ok) {
-        const types = await typesRes.json();
-        setRitualTypes(types);
-      }
-
-      // Get user's family ID from localStorage
-      const user = JSON.parse(localStorage.getItem('kulSetuUser') || '{}');
-      const familyId = user.familyId;
-
-      if (!familyId) {
-        toast({
-          title: 'Authentication Required',
-          description: 'Please log in to view your family rituals',
-          variant: 'destructive',
-        });
-        setIsAuthenticated(false);
-        setLoading(false);
-        return;
-      }
-
-      setIsAuthenticated(true);
-
-      // Load family rituals
-      const ritualsRes = await fetch(`${API_URL}/rituals/${familyId}`);
-      if (ritualsRes.ok) {
-        const ritualsData = await ritualsRes.json();
-        setRituals(Array.isArray(ritualsData) ? ritualsData : []);
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Rituals data received:", data);
+        
+        // Backend returns array directly, not wrapped in {rituals: [...]}
+        const ritualsData = Array.isArray(data) ? data : (data.rituals || []);
+        
+        const formattedRituals = ritualsData.map((r: any) => ({
+          id: r.reminderId,
+          title: r.ritualName,
+          category: r.ritualType,
+          date: new Date(r.ritualDate),
+          description: r.description || "",
+          panditType: r.panditType || "",
+          kulDevta: r.kulDevta || "",
+          location: r.location || "",
+          recurring: r.recurring || false,
+          recurrencePattern: r.recurrencePattern || "one_time",
+        }));
+        console.log("Formatted rituals:", formattedRituals);
+        setRituals(formattedRituals);
       } else {
-        setRituals([]);
+        const errorText = await response.text();
+        console.error("Failed to fetch rituals. Status:", response.status, "Error:", errorText);
       }
-
-      // Load stats
-      const statsRes = await fetch(`${API_URL}/rituals/stats?familyId=${familyId}`);
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      }
-
-      setFormData(prev => ({ ...prev, familyId }));
     } catch (error) {
+      console.error("Error fetching rituals:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load rituals',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load rituals",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...rituals];
-
-    // Filter by type
-    if (filterType !== 'all') {
-      filtered = filtered.filter(r => r.ritualType === filterType);
+  const handleAddRitual = async () => {
+    if (!newRitual.title || !newRitual.category || !selectedDate || !familyId) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
     }
 
-    // Filter by completion status
-    if (!showCompleted) {
-      filtered = filtered.filter(r => !r.isCompleted);
-    }
-
-    // Sort by date
-    filtered.sort((a, b) => new Date(a.ritualDate).getTime() - new Date(b.ritualDate).getTime());
-
-    setFilteredRituals(filtered);
-  };
-
-  const handleCreateRitual = async () => {
     try {
-      // Clean up the form data - remove empty strings and convert to null
-      const cleanedData = {
-        ...formData,
-        personId: formData.personId?.trim() || undefined, // Convert empty string to undefined
-        location: formData.location?.trim() || undefined,
-        panditType: formData.panditType?.trim() || undefined,
-        kulDevta: formData.kulDevta?.trim() || undefined,
-        description: formData.description?.trim() || undefined,
-        notes: formData.notes?.trim() || undefined,
-        recurrencePattern: formData.recurrencePattern?.trim() || undefined,
+      const requestBody = {
+        familyId: familyId,
+        ritualType: newRitual.category,
+        ritualName: newRitual.title,
+        ritualDate: format(selectedDate, "yyyy-MM-dd"),
+        recurring: newRitual.recurring || false,
+        recurrencePattern: newRitual.recurrencePattern || "one_time",
+        location: newRitual.location?.trim() || "",
+        panditType: newRitual.panditType?.trim() || "",
+        kulDevta: newRitual.kulDevta?.trim() || "",
+        description: newRitual.description?.trim() || "",
+        notes: "",
+        reminderDaysBefore: 7,
       };
 
+      console.log("Sending ritual data:", requestBody);
+
       const response = await fetch(`${API_URL}/rituals/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanedData),
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
       });
 
-      if (response.ok) {
+      const data = await response.json();
+      console.log("Response from backend:", data);
+
+      if (data.success) {
         toast({
-          title: 'Success',
-          description: 'Ritual reminder created successfully',
+          title: "Ritual Added",
+          description: "Your ritual reminder has been set successfully",
         });
-        setShowCreateDialog(false);
-        resetForm();
-        loadInitialData();
+        
+        // Refresh rituals
+        await fetchRituals(familyId);
+        
+        // Reset form
+        setIsDialogOpen(false);
+        setNewRitual({
+          title: "",
+          category: "",
+          description: "",
+          panditType: "",
+          kulDevta: "",
+          location: "",
+          recurring: false,
+          recurrencePattern: "one_time",
+        });
+        setSelectedDate(undefined);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create ritual');
+        console.error("Backend returned error:", data.error);
+        toast({
+          title: "Error",
+          description: data.error || "Failed to add ritual",
+          variant: "destructive",
+        });
       }
     } catch (error) {
+      console.error("Error adding ritual:", error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create ritual reminder',
-        variant: 'destructive',
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add ritual. Please try again.",
+        variant: "destructive",
       });
     }
   };
 
-  const handleUpdateRitual = async () => {
-    if (!selectedRitual) return;
-
+  const handleDeleteRitual = async (id: string) => {
     try {
-      const updateData: any = {};
-      
-      // Only include fields that have changed
-      if (formData.ritualName) updateData.ritualName = formData.ritualName;
-      if (formData.location) updateData.location = formData.location;
-      if (formData.notes) updateData.notes = formData.notes;
-      if (formData.reminderDaysBefore) updateData.reminderDaysBefore = formData.reminderDaysBefore;
-      if (formData.ritualDate) {
-        const [year, month, day] = formData.ritualDate.split('-');
-        updateData.ritualDate = `${day}-${month}-${year}`;
-      }
-
-      const response = await fetch(`${API_URL}/rituals/update/${selectedRitual.reminderId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
+      const response = await fetch(`${API_URL}/rituals/delete/${id}`, {
+        method: "DELETE",
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (data.success) {
+        setRituals(rituals.filter((r) => r.id !== id));
         toast({
-          title: 'Success',
-          description: 'Ritual updated successfully',
+          title: "Ritual Deleted",
+          description: "The ritual has been removed",
         });
-        setShowEditDialog(false);
-        loadInitialData();
       } else {
-        throw new Error('Failed to update ritual');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update ritual',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeleteRitual = async (reminderId: string) => {
-    if (!confirm('Are you sure you want to delete this ritual?')) return;
-
-    try {
-      const response = await fetch(`${API_URL}/rituals/delete/${reminderId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
         toast({
-          title: 'Success',
-          description: 'Ritual deleted successfully',
+          title: "Error",
+          description: data.error || "Failed to delete ritual",
+          variant: "destructive",
         });
-        loadInitialData();
-      } else {
-        throw new Error('Failed to delete ritual');
       }
     } catch (error) {
+      console.error("Error deleting ritual:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to delete ritual',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete ritual",
+        variant: "destructive",
       });
     }
   };
 
-  const handleMarkComplete = async (ritual: Ritual) => {
-    try {
-      const response = await fetch(`${API_URL}/rituals/update/${ritual.reminderId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isCompleted: !ritual.isCompleted }),
-      });
+  const upcomingRituals = rituals
+    .filter((r) => r.date >= new Date())
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-      if (response.ok) {
-        toast({
-          title: 'Success',
-          description: ritual.isCompleted ? 'Ritual marked as pending' : 'Ritual marked as completed',
-        });
-        loadInitialData();
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update ritual status',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const resetForm = () => {
-    const user = JSON.parse(localStorage.getItem('kulSetuUser') || '{}');
-    setFormData({
-      ritualType: '',
-      ritualName: '',
-      ritualDate: '',
-      familyId: user.familyId || '',
-      personId: '',
-      recurring: false,
-      recurrencePattern: '',
-      location: '',
-      panditType: '',
-      kulDevta: '',
-      description: '',
-      notes: '',
-      reminderDaysBefore: 7,
-    });
-  };
-
-  const openEditDialog = (ritual: Ritual) => {
-    setSelectedRitual(ritual);
-    // Convert date from YYYY-MM-DD to input format
-    const dateParts = ritual.ritualDate.split('-');
-    const formattedDate = dateParts.length === 3 ? ritual.ritualDate : '';
+  // Get rituals and festivals for selected date
+  const getEventsForDate = (date: Date | undefined) => {
+    if (!date) return { rituals: [], festivals: [] };
     
-    setFormData({
-      ritualType: ritual.ritualType,
-      ritualName: ritual.ritualName,
-      ritualDate: formattedDate,
-      familyId: ritual.familyId,
-      personId: ritual.personId || '',
-      recurring: ritual.recurring,
-      recurrencePattern: ritual.recurrencePattern || '',
-      location: ritual.location || '',
-      panditType: ritual.panditType || '',
-      kulDevta: ritual.kulDevta || '',
-      description: ritual.description || '',
-      notes: ritual.notes || '',
-      reminderDaysBefore: ritual.reminderDaysBefore,
+    const dateStr = format(date, 'yyyy-MM-dd');
+    
+    const dateRituals = rituals.filter(r => 
+      format(r.date, 'yyyy-MM-dd') === dateStr
+    );
+    
+    const dateFestivals = festivals.filter(f => 
+      format(new Date(f.festivalDate), 'yyyy-MM-dd') === dateStr
+    );
+    
+    return { rituals: dateRituals, festivals: dateFestivals };
+  };
+
+  const selectedDateEvents = getEventsForDate(selectedDate);
+
+  // Get dates that have events for calendar highlighting
+  const getDatesWithEvents = () => {
+    const dates: Date[] = [];
+    
+    // Add ritual dates
+    rituals.forEach(ritual => {
+      dates.push(ritual.date);
     });
-    setShowEditDialog(true);
+    
+    // Add festival dates
+    festivals.forEach(festival => {
+      dates.push(new Date(festival.festivalDate));
+    });
+    
+    return dates;
   };
 
-  const getRitualTypeLabel = (type: string) => {
-    const typeObj = ritualTypes?.ritual_types.find(t => t.value === type);
-    return typeObj?.label || type;
-  };
+  const datesWithEvents = getDatesWithEvents();
 
-  const getRitualTypeColor = (type: string) => {
-    const colors: { [key: string]: string } = {
-      barsi: 'bg-purple-100 text-purple-800',
-      shraad: 'bg-indigo-100 text-indigo-800',
-      marriage: 'bg-pink-100 text-pink-800',
-      pooja: 'bg-orange-100 text-orange-800',
-      worship: 'bg-yellow-100 text-yellow-800',
-      kul_devta: 'bg-red-100 text-red-800',
-      festival: 'bg-green-100 text-green-800',
-      birth: 'bg-blue-100 text-blue-800',
-      death: 'bg-gray-100 text-gray-800',
+  const getCategoryStyle = (category: string) => {
+    const styles: Record<string, string> = {
+      barsi: "bg-muted/50 text-muted-foreground border-muted",
+      shraad: "bg-spiritual/10 text-spiritual border-spiritual/30",
+      marriage: "bg-accent/10 text-accent-foreground border-accent/30",
+      pooja: "bg-sacred/10 text-sacred-foreground border-sacred/30",
+      kuldevta: "bg-divine/10 text-divine-foreground border-divine/30",
+      festival: "bg-primary/10 text-primary border-primary/30",
+      birth: "bg-secondary/10 text-secondary-foreground border-secondary/30",
+      death: "bg-muted/50 text-muted-foreground border-muted",
+      uttarakhand: "bg-primary/10 text-primary border-primary/30",
+      other: "bg-muted/50 text-foreground border-border",
     };
-    return colors[type] || 'bg-gray-100 text-gray-800';
+    return styles[category] || "bg-primary/10 text-primary border-primary/30";
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-IN', { 
-      day: '2-digit', 
-      month: 'short', 
-      year: 'numeric' 
-    });
+  const getCategoryIcon = (category: string) => {
+    const cat = ritualCategories.find(c => c.value === category);
+    return cat?.icon || Bell;
   };
-
-  const getDaysUntil = (dateStr: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const ritualDate = new Date(dateStr);
-    ritualDate.setHours(0, 0, 0, 0);
-    const diff = Math.ceil((ritualDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
-  };
-
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading rituals...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card className="max-w-2xl mx-auto">
-          <CardContent className="flex flex-col items-center justify-center h-96 text-center p-8">
-            <Calendar className="h-16 w-16 text-muted-foreground mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Authentication Required</h2>
-            <p className="text-muted-foreground mb-6">
-              Please log in to view and manage your family's ritual reminders.
-            </p>
-            <Button onClick={() => window.location.href = '/auth'}>
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Calendar className="h-8 w-8" />
-            Ritual Reminders
+    <div className="min-h-screen bg-gradient-to-br from-background via-spiritual/5 to-sacred/5">
+      <div className="container mx-auto px-4 py-12">
+        {/* Header */}
+        <div className="mb-12 text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-spiritual mb-4 shadow-spiritual animate-glow">
+            <Flame className="h-8 w-8 text-spiritual-foreground" />
+          </div>
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-spiritual bg-clip-text text-transparent">
+            Rituals & Festivals
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Track and manage all family rituals and ceremonies
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Preserve your spiritual traditions and never miss an important ceremony
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} size="lg">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Ritual
-        </Button>
-      </div>
 
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Rituals</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="calendar" className="space-y-8">
+          <TabsList className="grid w-full max-w-lg mx-auto grid-cols-3 h-14 p-1 bg-card/50 backdrop-blur-sm border shadow-lg">
+            <TabsTrigger value="calendar" className="data-[state=active]:bg-spiritual data-[state=active]:text-spiritual-foreground">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="reminders" className="data-[state=active]:bg-spiritual data-[state=active]:text-spiritual-foreground">
+              <Bell className="mr-2 h-4 w-4" />
+              Reminders
+            </TabsTrigger>
+            <TabsTrigger value="festivals" className="data-[state=active]:bg-spiritual data-[state=active]:text-spiritual-foreground">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Festivals
+            </TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.upcoming}</div>
-              <p className="text-xs text-muted-foreground">Next 30 days</p>
-            </CardContent>
-          </Card>
+          <TabsContent value="calendar" className="space-y-8">
+            <div className="grid lg:grid-cols-5 gap-6">
+              {/* Calendar Section - More compact */}
+              <Card className="lg:col-span-3 shadow-spiritual border-spiritual/20 bg-gradient-to-br from-card to-spiritual/5">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-3 text-2xl">
+                    <div className="p-2 rounded-lg bg-spiritual/10">
+                      <CalendarIcon className="h-6 w-6 text-spiritual" />
+                    </div>
+                    Select Date
+                  </CardTitle>
+                  <CardDescription>Choose a date for your sacred ritual or ceremony</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 pb-6">
+                  <div className="flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      modifiers={{
+                        hasEvents: datesWithEvents,
+                      }}
+                      modifiersStyles={{
+                        hasEvents: {
+                          fontWeight: 'bold',
+                          textDecoration: 'underline',
+                          color: 'hsl(var(--primary))',
+                        }
+                      }}
+                      className="rounded-xl border-2 border-spiritual/20 shadow-lg bg-card pointer-events-auto scale-110"
+                    />
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="text-xs text-center text-muted-foreground">
+                    <span className="font-bold text-primary underline">Bold & Underlined dates</span> have events
+                  </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Bell className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.pending}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              <CardTitle>Filters</CardTitle>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="show-completed"
-                  checked={showCompleted}
-                  onCheckedChange={setShowCompleted}
-                />
-                <Label htmlFor="show-completed">Show Completed</Label>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-[280px]">
-              <SelectValue placeholder="Filter by ritual type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Rituals</SelectItem>
-              {ritualTypes?.ritual_types.map(type => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      {/* Rituals List */}
-      <Tabs defaultValue="list" className="w-full">
-        <TabsList>
-          <TabsTrigger value="list">List View</TabsTrigger>
-          <TabsTrigger value="upcoming">Upcoming Only</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="list" className="space-y-4 mt-4">
-          {filteredRituals.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center h-64">
-                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground text-center">
-                  No rituals found. Click "Add Ritual" to create one.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredRituals.map(ritual => {
-              const daysUntil = getDaysUntil(ritual.ritualDate);
-              const isUpcoming = daysUntil >= 0 && daysUntil <= 30;
-
-              return (
-                <Card key={ritual.reminderId} className={ritual.isCompleted ? 'opacity-60' : ''}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge className={getRitualTypeColor(ritual.ritualType)}>
-                            {getRitualTypeLabel(ritual.ritualType)}
-                          </Badge>
-                          {ritual.recurring && (
-                            <Badge variant="outline">
-                              🔄 {ritual.recurrencePattern}
-                            </Badge>
-                          )}
-                          {isUpcoming && !ritual.isCompleted && (
-                            <Badge variant="destructive">
-                              <Bell className="h-3 w-3 mr-1" />
-                              {daysUntil === 0 ? 'Today' : `${daysUntil} days`}
-                            </Badge>
-                          )}
-                          {ritual.isCompleted && (
-                            <Badge variant="secondary">✓ Completed</Badge>
-                          )}
-                        </div>
-                        <CardTitle className="text-xl">{ritual.ritualName}</CardTitle>
-                        <CardDescription className="mt-2 flex flex-col gap-1">
-                          <span className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            {formatDate(ritual.ritualDate)}
-                          </span>
-                          {ritual.location && (
-                            <span className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              {ritual.location}
-                            </span>
-                          )}
-                          {ritual.personName && (
-                            <span className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              {ritual.personName}
-                            </span>
-                          )}
-                        </CardDescription>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleMarkComplete(ritual)}
-                        >
-                          {ritual.isCompleted ? 'Mark Pending' : 'Mark Complete'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditDialog(ritual)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteRitual(ritual.reminderId)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                  {/* Events on Selected Date */}
+                  {selectedDate && (selectedDateEvents.rituals.length > 0 || selectedDateEvents.festivals.length > 0) && (
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 border-2 border-primary/30">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <CalendarIcon className="h-4 w-4 text-primary" />
+                        Events on {format(selectedDate, "PPP")}
+                      </h4>
+                      <div className="space-y-3">
+                        {/* Festivals */}
+                        {selectedDateEvents.festivals.map(festival => (
+                          <div key={festival.festivalId} className="p-3 bg-card rounded-lg border border-primary/20">
+                            <div className="flex items-start gap-2">
+                              <Sparkles className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
+                              <div className="flex-1">
+                                <p className="font-semibold text-primary">{festival.festivalName}</p>
+                                <div className="flex gap-2 mt-1">
+                                  <Badge variant="secondary" className="text-xs">{festival.festivalType}</Badge>
+                                  {festival.region !== "All India" && (
+                                    <Badge variant="outline" className="text-xs">{festival.region}</Badge>
+                                  )}
+                                </div>
+                                {festival.description && (
+                                  <p className="text-xs text-muted-foreground mt-1">{festival.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {/* Rituals */}
+                        {selectedDateEvents.rituals.map(ritual => {
+                          const Icon = getCategoryIcon(ritual.category);
+                          const categoryInfo = ritualCategories.find(c => c.value === ritual.category);
+                          return (
+                            <div key={ritual.id} className="p-3 bg-card rounded-lg border border-spiritual/20">
+                              <div className="flex items-start gap-2">
+                                <Icon className="h-4 w-4 text-spiritual mt-1 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <p className="font-semibold">{ritual.title}</p>
+                                  <Badge variant="outline" className="text-xs mt-1">
+                                    {categoryInfo?.label || ritual.category}
+                                  </Badge>
+                                  {ritual.description && (
+                                    <p className="text-xs text-muted-foreground mt-1">{ritual.description}</p>
+                                  )}
+                                  {ritual.location && (
+                                    <p className="text-xs text-muted-foreground">📍 {ritual.location}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  </CardHeader>
-                  {(ritual.description || ritual.notes || ritual.panditType || ritual.kulDevta) && (
-                    <CardContent>
-                      <div className="space-y-2 text-sm">
-                        {ritual.description && (
-                          <p className="text-muted-foreground">{ritual.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-4">
-                          {ritual.panditType && (
-                            <span className="text-muted-foreground">
-                              <strong>Pandit:</strong> {ritual.panditType}
-                            </span>
-                          )}
-                          {ritual.kulDevta && (
-                            <span className="text-muted-foreground">
-                              <strong>Kul Devta:</strong> {ritual.kulDevta}
-                            </span>
-                          )}
-                          {ritual.reminderDaysBefore && (
-                            <span className="text-muted-foreground">
-                              <strong>Reminder:</strong> {ritual.reminderDaysBefore} days before
-                            </span>
-                          )}
-                        </div>
-                        {ritual.notes && (
-                          <p className="text-muted-foreground italic">
-                            <strong>Notes:</strong> {ritual.notes}
-                          </p>
-                        )}
-                      </div>
-                    </CardContent>
                   )}
-                </Card>
-              );
-            })
-          )}
-        </TabsContent>
 
-        <TabsContent value="upcoming" className="space-y-4 mt-4">
-          {filteredRituals.filter(r => getDaysUntil(r.ritualDate) >= 0 && getDaysUntil(r.ritualDate) <= 30).length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center h-64">
-                <Bell className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground text-center">
-                  No upcoming rituals in the next 30 days.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredRituals
-              .filter(r => getDaysUntil(r.ritualDate) >= 0 && getDaysUntil(r.ritualDate) <= 30)
-              .map(ritual => {
-                const daysUntil = getDaysUntil(ritual.ritualDate);
-                return (
-                  <Card key={ritual.reminderId}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge className={getRitualTypeColor(ritual.ritualType)}>
-                              {getRitualTypeLabel(ritual.ritualType)}
-                            </Badge>
-                            <Badge variant="destructive">
-                              <Bell className="h-3 w-3 mr-1" />
-                              {daysUntil === 0 ? 'Today!' : `In ${daysUntil} days`}
-                            </Badge>
-                          </div>
-                          <CardTitle className="text-xl">{ritual.ritualName}</CardTitle>
-                          <CardDescription className="mt-2 flex flex-col gap-1">
-                            <span className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              {formatDate(ritual.ritualDate)}
-                            </span>
-                            {ritual.location && (
-                              <span className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4" />
-                                {ritual.location}
-                              </span>
+                  {/* No events on selected date */}
+                  {selectedDate && selectedDateEvents.rituals.length === 0 && selectedDateEvents.festivals.length === 0 && (
+                    <div className="p-4 rounded-xl bg-muted/30 border border-muted/50 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        No events scheduled for {format(selectedDate, "PPP")}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Today's Rituals */}
+                  {upcomingRituals.filter(r => format(r.date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')).length > 0 && (
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-sacred/10 to-spiritual/10 border-2 border-sacred/30">
+                      <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                        <Bell className="h-4 w-4 text-sacred" />
+                        Today's Rituals
+                      </h4>
+                      <div className="space-y-2">
+                        {upcomingRituals
+                          .filter(r => format(r.date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd'))
+                          .slice(0, 3)
+                          .map(ritual => (
+                            <div key={ritual.id} className="text-sm p-2 bg-card rounded-lg">
+                              <p className="font-medium">{ritual.title}</p>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Next 7 Days Preview */}
+                  <div className="p-4 rounded-xl bg-divine/5 border border-divine/20">
+                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-divine" />
+                      Next 7 Days
+                    </h4>
+                    <div className="space-y-2">
+                      {upcomingRituals
+                        .filter(r => {
+                          const days = Math.ceil((r.date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                          return days >= 0 && days <= 7;
+                        })
+                        .slice(0, 4)
+                        .map(ritual => {
+                          const Icon = getCategoryIcon(ritual.category);
+                          return (
+                            <div key={ritual.id} className="flex items-center gap-3 p-2 bg-card rounded-lg hover:shadow-md transition-shadow">
+                              <Icon className="h-4 w-4 text-spiritual flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{ritual.title}</p>
+                                <p className="text-xs text-muted-foreground">{format(ritual.date, "MMM dd")}</p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      }
+                      {upcomingRituals.filter(r => {
+                        const days = Math.ceil((r.date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                        return days >= 0 && days <= 7;
+                      }).length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-2">No rituals in next 7 days</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Add Section */}
+              <Card className="lg:col-span-2 shadow-sacred border-sacred/20 bg-gradient-to-br from-card to-sacred/5 flex flex-col">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="p-2 rounded-lg bg-sacred/10">
+                      <Plus className="h-5 w-5 text-sacred" />
+                    </div>
+                    Quick Add
+                  </CardTitle>
+                  <CardDescription>Create a new ritual reminder</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 flex-1 flex flex-col">
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="w-full h-auto py-6 bg-gradient-spiritual hover:opacity-90 shadow-spiritual text-base" size="lg">
+                        <Plus className="mr-2 h-6 w-6" />
+                        Add Ritual Reminder
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Add New Ritual</DialogTitle>
+                        <DialogDescription>
+                          Fill in the details for your ritual or ceremony
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="title">Ritual Name *</Label>
+                          <Input
+                            id="title"
+                            placeholder="e.g., Nanda Devi Pooja"
+                            value={newRitual.title}
+                            onChange={(e) =>
+                              setNewRitual({ ...newRitual, title: e.target.value })
+                            }
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="category">Category *</Label>
+                          <Select
+                            value={newRitual.category}
+                            onValueChange={(value) =>
+                              setNewRitual({ ...newRitual, category: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ritualCategories.map((cat) => (
+                                <SelectItem key={cat.value} value={cat.value}>
+                                  {cat.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Date *</Label>
+                          <div className="border rounded-md p-3 bg-muted/50">
+                            {selectedDate ? (
+                              <p className="text-sm">
+                                {format(selectedDate, "PPP")}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                Select a date from the calendar
+                              </p>
                             )}
-                          </CardDescription>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Description</Label>
+                          <Textarea
+                            id="description"
+                            placeholder="Add details about the ritual, significance, preparations needed..."
+                            value={newRitual.description}
+                            onChange={(e) =>
+                              setNewRitual({ ...newRitual, description: e.target.value })
+                            }
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="pandit">Pandit Type</Label>
+                          <Select
+                            value={newRitual.panditType}
+                            onValueChange={(value) =>
+                              setNewRitual({ ...newRitual, panditType: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select pandit type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {panditTypes.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="kuldevta">Kul Devta (Family Deity)</Label>
+                          <Input
+                            id="kuldevta"
+                            placeholder="e.g., Nanda Devi, Gangnath, Kedarnath"
+                            value={newRitual.kulDevta}
+                            onChange={(e) =>
+                              setNewRitual({ ...newRitual, kulDevta: e.target.value })
+                            }
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="location">Location</Label>
+                          <Input
+                            id="location"
+                            placeholder="Temple, home, or specific place"
+                            value={newRitual.location}
+                            onChange={(e) =>
+                              setNewRitual({ ...newRitual, location: e.target.value })
+                            }
+                          />
                         </div>
                       </div>
-                    </CardHeader>
-                  </Card>
-                );
-              })
-          )}
-        </TabsContent>
-      </Tabs>
+                      <div className="flex justify-end gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsDialogOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button onClick={handleAddRitual}>Add Ritual</Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={showCreateDialog || showEditDialog} onOpenChange={(open) => {
-        if (!open) {
-          setShowCreateDialog(false);
-          setShowEditDialog(false);
-          resetForm();
-          setSelectedRitual(null);
-        }
-      }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {showEditDialog ? 'Edit Ritual' : 'Create New Ritual'}
-            </DialogTitle>
-          </DialogHeader>
+                  {selectedDate && (
+                    <div className="mt-auto p-4 bg-gradient-to-r from-spiritual/10 to-sacred/10 rounded-xl border-2 border-spiritual/30 shadow-md">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-spiritual/20 rounded-lg">
+                          <CalendarIcon className="h-5 w-5 text-spiritual" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Selected Date</p>
+                          <p className="font-bold text-spiritual text-lg">
+                            {format(selectedDate, "EEEE")}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(selectedDate, "MMMM d, yyyy")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ritualType">Ritual Type *</Label>
-                <Select
-                  value={formData.ritualType}
-                  onValueChange={(value) => setFormData({ ...formData, ritualType: value })}
-                  disabled={showEditDialog}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ritualTypes?.ritual_types.map(type => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ritualDate">Date *</Label>
-                <Input
-                  id="ritualDate"
-                  type="date"
-                  value={formData.ritualDate}
-                  onChange={(e) => setFormData({ ...formData, ritualDate: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ritualName">Ritual Name *</Label>
-              <Input
-                id="ritualName"
-                value={formData.ritualName}
-                onChange={(e) => setFormData({ ...formData, ritualName: e.target.value })}
-                placeholder="e.g., Grandfather's Barsi"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="e.g., Family Temple, Delhi"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="panditType">Pandit Type</Label>
-                <Select
-                  value={formData.panditType}
-                  onValueChange={(value) => setFormData({ ...formData, panditType: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select pandit type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ritualTypes?.pandit_types.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="kulDevta">Kul Devta</Label>
-                <Input
-                  id="kulDevta"
-                  value={formData.kulDevta}
-                  onChange={(e) => setFormData({ ...formData, kulDevta: e.target.value })}
-                  placeholder="e.g., Lord Shiva"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reminderDays">Remind Me (Days Before)</Label>
-                <Input
-                  id="reminderDays"
-                  type="number"
-                  value={formData.reminderDaysBefore}
-                  onChange={(e) => setFormData({ ...formData, reminderDaysBefore: parseInt(e.target.value) })}
-                  min="0"
-                />
-              </div>
-            </div>
-
-            {!showEditDialog && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="recurring"
-                    checked={formData.recurring}
-                    onCheckedChange={(checked) => setFormData({ ...formData, recurring: checked })}
-                  />
-                  <Label htmlFor="recurring">Recurring Ritual</Label>
-                </div>
-
-                {formData.recurring && (
-                  <div className="space-y-2">
-                    <Label htmlFor="recurrence">Recurrence Pattern</Label>
-                    <Select
-                      value={formData.recurrencePattern}
-                      onValueChange={(value) => setFormData({ ...formData, recurrencePattern: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select pattern" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ritualTypes?.recurrence_patterns.map(pattern => (
-                          <SelectItem key={pattern} value={pattern}>
-                            {pattern}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  {/* Ritual Categories Preview */}
+                  <div className="space-y-3 mt-auto">
+                    <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                      <Sparkles className="h-3 w-3" />
+                      Quick Categories
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ritualCategories.slice(0, 6).map((cat) => {
+                        const Icon = cat.icon;
+                        return (
+                          <button
+                            key={cat.value}
+                            className="p-3 rounded-lg border-2 bg-card/50 hover:bg-card hover:border-spiritual/30 transition-all duration-200 group text-left"
+                            onClick={() => setNewRitual({ ...newRitual, category: cat.value })}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon className={cn("h-4 w-4 group-hover:scale-110 transition-transform", cat.color)} />
+                              <span className="text-xs font-medium truncate">{cat.label.split(' ')[0]}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                )}
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-3 pt-4 border-t">
+                    <div className="p-3 rounded-lg bg-spiritual/5 text-center">
+                      <p className="text-2xl font-bold text-spiritual">{upcomingRituals.length}</p>
+                      <p className="text-xs text-muted-foreground">Total Rituals</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-sacred/5 text-center">
+                      <p className="text-2xl font-bold text-sacred">
+                        {upcomingRituals.filter(r => {
+                          const days = Math.ceil((r.date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                          return days >= 0 && days <= 30;
+                        }).length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">This Month</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reminders" className="space-y-6">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Upcoming Rituals</h2>
+                <p className="text-muted-foreground">{upcomingRituals.length} sacred event(s) scheduled</p>
+              </div>
+            </div>
+
+            {upcomingRituals.length === 0 ? (
+              <Card className="shadow-divine border-divine/20">
+                <CardContent className="text-center py-16">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-divine/10 mb-4">
+                    <Bell className="h-10 w-10 text-divine/50" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No Upcoming Rituals</h3>
+                  <p className="text-muted-foreground mb-6">Start by adding your first ritual from the Calendar tab</p>
+                  <Button onClick={() => {
+                    const calendarTab = document.querySelector('[value="calendar"]') as HTMLElement;
+                    calendarTab?.click();
+                  }} className="bg-gradient-spiritual">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Your First Ritual
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6">
+                {upcomingRituals.map((ritual) => {
+                  const Icon = getCategoryIcon(ritual.category);
+                  const categoryInfo = ritualCategories.find(c => c.value === ritual.category);
+                  
+                  return (
+                    <Card
+                      key={ritual.id}
+                      className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-spiritual/30"
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-6">
+                          {/* Date Badge */}
+                          <div className="flex-shrink-0">
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-spiritual flex flex-col items-center justify-center text-spiritual-foreground shadow-spiritual">
+                              <span className="text-xs font-medium uppercase">{format(ritual.date, "MMM")}</span>
+                              <span className="text-3xl font-bold">{format(ritual.date, "dd")}</span>
+                              <span className="text-xs">{format(ritual.date, "yyyy")}</span>
+                            </div>
+                          </div>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-4 mb-3">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <Badge className={cn("border", getCategoryStyle(ritual.category))}>
+                                  <Icon className="h-3 w-3 mr-1" />
+                                  {categoryInfo?.label}
+                                </Badge>
+                                <span className="text-sm text-muted-foreground">
+                                  {format(ritual.date, "EEEE")}
+                                </span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteRitual(ritual.id)}
+                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <h3 className="text-2xl font-bold mb-2 group-hover:text-spiritual transition-colors">
+                              {ritual.title}
+                            </h3>
+
+                            {ritual.description && (
+                              <p className="text-muted-foreground mb-4 line-clamp-2">
+                                {ritual.description}
+                              </p>
+                            )}
+
+                            {/* Details Grid */}
+                            <div className="grid sm:grid-cols-3 gap-4 pt-4 border-t">
+                              {ritual.panditType && (
+                                <div className="flex items-start gap-2">
+                                  <Users className="h-4 w-4 text-spiritual mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Pandit</p>
+                                    <p className="text-sm font-medium">{ritual.panditType}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {ritual.kulDevta && (
+                                <div className="flex items-start gap-2">
+                                  <Star className="h-4 w-4 text-sacred mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Kul Devta</p>
+                                    <p className="text-sm font-medium">{ritual.kulDevta}</p>
+                                  </div>
+                                </div>
+                              )}
+                              {ritual.location && (
+                                <div className="flex items-start gap-2">
+                                  <CalendarIcon className="h-4 w-4 text-divine mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Location</p>
+                                    <p className="text-sm font-medium">{ritual.location}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
+          </TabsContent>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe the ritual..."
-                rows={3}
-              />
+          <TabsContent value="festivals" className="space-y-8">
+            {/* Public Festivals from Pandit */}
+            <div>
+              <div className="mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-gradient-sacred shadow-sacred">
+                    <span className="text-3xl">🎉</span>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Festival Calendar</h2>
+                    <p className="text-muted-foreground">Upcoming festivals and celebrations</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.href = '/pandit/dashboard'}
+                  className="text-sm"
+                >
+                  <Star className="mr-2 h-4 w-4" />
+                  Pandit Dashboard
+                </Button>
+              </div>
+
+              {festivals.length === 0 ? (
+                <Card className="shadow-divine border-divine/20">
+                  <CardContent className="text-center py-16">
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-divine/10 mb-4">
+                      <CalendarIcon className="h-10 w-10 text-divine/50" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">No Festivals Added Yet</h3>
+                    <p className="text-muted-foreground mb-4">Pandit can add festivals from the Pandit Dashboard</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {festivals.map((festival, index) => (
+                    <Card
+                      key={festival.festivalId}
+                      className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-sacred/30 bg-gradient-to-br from-card to-sacred/5"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="p-3 rounded-xl bg-gradient-sacred text-sacred-foreground shadow-lg group-hover:scale-110 transition-transform">
+                            <Sparkles className="h-6 w-6" />
+                          </div>
+                          <Badge variant="outline">{festival.festivalType}</Badge>
+                        </div>
+                        <CardTitle className="text-xl group-hover:text-sacred transition-colors">
+                          {festival.festivalName}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <CalendarIcon className="h-4 w-4" />
+                            <span className="text-sm font-medium">
+                              {format(new Date(festival.festivalDate), "PPP")}
+                            </span>
+                          </div>
+                          {festival.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {festival.description}
+                            </p>
+                          )}
+                          {festival.region && festival.region !== "All India" && (
+                            <Badge variant="secondary" className="text-xs">
+                              {festival.region}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes or reminders..."
-                rows={2}
-              />
+            {/* Uttarakhand Festivals */}
+            <div>
+              <div className="mb-6 flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-sacred shadow-sacred">
+                  <span className="text-3xl">🏔️</span>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Uttarakhand Festivals</h2>
+                  <p className="text-muted-foreground">Celebrate the rich cultural heritage of Uttarakhand</p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {uttarakhandFestivals.map((festival, index) => (
+                  <Card
+                    key={festival.name}
+                    className="group hover:shadow-2xl transition-all duration-300 border-2 hover:border-sacred/30 bg-gradient-to-br from-card to-sacred/5"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="p-3 rounded-xl bg-gradient-sacred text-sacred-foreground shadow-lg group-hover:scale-110 transition-transform">
+                          <Sparkles className="h-6 w-6" />
+                        </div>
+                      </div>
+                      <CardTitle className="text-xl group-hover:text-sacred transition-colors">
+                        {festival.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <CalendarIcon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{festival.date}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowCreateDialog(false);
-                  setShowEditDialog(false);
-                  resetForm();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={showEditDialog ? handleUpdateRitual : handleCreateRitual}>
-                {showEditDialog ? 'Update' : 'Create'} Ritual
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+            {/* Common Rituals */}
+            <Card className="shadow-spiritual border-spiritual/20 bg-gradient-to-br from-card to-spiritual/5">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-lg bg-spiritual/10">
+                    <Flame className="h-6 w-6 text-spiritual" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl">Traditional Uttarakhand Rituals</CardTitle>
+                    <CardDescription className="text-base">Sacred practices passed through generations</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {[
+                    {
+                      title: "Jagra/Jagar",
+                      description: "Night-long worship ceremony to invoke local deities",
+                      icon: Moon,
+                      color: "spiritual"
+                    },
+                    {
+                      title: "Kul Devta Pooja",
+                      description: "Worship of family deity at ancestral temples",
+                      icon: Star,
+                      color: "divine"
+                    },
+                    {
+                      title: "Bhoomi Pooja",
+                      description: "Land worship before construction or farming",
+                      icon: Flower2,
+                      color: "sacred"
+                    },
+                    {
+                      title: "Phool Dei",
+                      description: "Spring festival where children offer flowers",
+                      icon: Sun,
+                      color: "secondary"
+                    },
+                  ].map((ritual, index) => {
+                    const Icon = ritual.icon;
+                    return (
+                      <div
+                        key={ritual.title}
+                        className="group p-5 border-2 rounded-xl hover:shadow-lg transition-all duration-300 bg-card hover:border-spiritual/30"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={cn(
+                            "p-3 rounded-xl flex-shrink-0 group-hover:scale-110 transition-transform",
+                            ritual.color === "spiritual" && "bg-spiritual/10 text-spiritual",
+                            ritual.color === "divine" && "bg-divine/10 text-divine",
+                            ritual.color === "sacred" && "bg-sacred/10 text-sacred-foreground",
+                            ritual.color === "secondary" && "bg-secondary/10 text-secondary-foreground"
+                          )}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-lg mb-2 group-hover:text-spiritual transition-colors">
+                              {ritual.title}
+                            </h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              {ritual.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
