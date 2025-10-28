@@ -87,10 +87,7 @@ const Home = () => {
             </p>
           </div>
 
-          {/* Ritual Widget */}
-          <div className="mb-12 max-w-2xl mx-auto">
-            <RitualWidget />
-          </div>
+          
 
           <div className="grid md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
@@ -104,6 +101,10 @@ const Home = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+          {/* Ritual Widget */}
+          <div className=" mt-12 max-w-2xl mx-auto">
+            <RitualWidget />
           </div>
         </div>
       </section>
