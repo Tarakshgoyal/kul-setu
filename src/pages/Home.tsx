@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { UserPlus, Search, Users, Star, TreePine } from 'lucide-react';
+import { UserPlus, Search, Users, Heart, Star, TreePine } from 'lucide-react';
 import RitualWidget from '@/components/RitualWidget';
-import RamSetuIcon from '@/components/RamSetuIcon';
 // import heroImage from '@/assets/hero-spiritual.jpg';
 import heroimage from '@/assets/tree.jpg'
 
@@ -68,7 +67,7 @@ const Home = () => {
                 className="w-[450px] h-auto ml-20 rounded-2xl shadow-divine"
               />
               <div className="absolute -top-4 -right-4 bg-spiritual/20 rounded-full p-4 animate-glow">
-                <RamSetuIcon className="w-8 h-8 text-white" size={32} />
+                <Heart className="w-8 h-8 text-white" />
               </div>
             </div>
           </div>
@@ -87,7 +86,10 @@ const Home = () => {
             </p>
           </div>
 
-          
+          {/* Ritual Widget */}
+          <div className="mb-12 max-w-2xl mx-auto">
+            <RitualWidget />
+          </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
@@ -101,10 +103,6 @@ const Home = () => {
                 </CardContent>
               </Card>
             ))}
-          </div>
-          {/* Ritual Widget */}
-          <div className=" mt-12 max-w-2xl mx-auto">
-            <RitualWidget />
           </div>
         </div>
       </section>
