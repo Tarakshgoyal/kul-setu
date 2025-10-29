@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { UserPlus, Search, Users, Heart, Star, TreePine } from 'lucide-react';
 import RitualWidget from '@/components/RitualWidget';
 // import heroImage from '@/assets/hero-spiritual.jpg';
-import heroimage from '@/assets/hero-spiritual.jpg'
+import heroimage from '@/assets/treee.png'
 
 const Home = () => {
   const features = [
