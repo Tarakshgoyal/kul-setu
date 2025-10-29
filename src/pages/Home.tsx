@@ -64,7 +64,7 @@ const Home = () => {
               <img 
                 src={heroimage} 
                 alt="Spiritual Family Tree"
-                className="w-[550px] h-auto ml-20 rounded-2xl shadow-divine"
+                className="w-[550px] h-auto ml-15 rounded-2xl shadow-divine"
               />
               <div className="absolute -top-4 -right-4 bg-spiritual/20 rounded-full p-4 animate-glow">
                 <Heart className="w-8 h-8 text-white" />
